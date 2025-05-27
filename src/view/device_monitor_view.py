@@ -237,7 +237,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             self.imu_logger = IMULogger(full_path)
             if self.imu_logger.start_logging():
                 # Update button
-                self.log_button.configure(text="Stop Log")
+                self.log_button.configure(text="Stop Log", fg_color="darkred", hover_color="#8B0000")
                 # Connect presenters
                 self.imu1_presenter.set_log_dialog(self)
                 self.imu2_presenter.set_log_dialog(self)
@@ -255,7 +255,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             self.imu1_presenter.set_log_dialog(None)
             self.imu2_presenter.set_log_dialog(None)
             self.selected_folder = None  # Reset folder selection
-            self.log_button.configure(text="Log")
+            self.log_button.configure(text="Log", fg_color=self.config.BUTTON_COLOR, hover_color=self.config.BUTTON_HOVER_COLOR)
 
     def log_imu_data(self, imu_number, imu_data, euler_data):
         """Log IMU and Euler data to CSV files"""
