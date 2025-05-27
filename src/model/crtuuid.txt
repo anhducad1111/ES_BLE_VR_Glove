@@ -1,0 +1,14 @@
+UUID	Alias	Read	Write	Notification	Data type	Byte Length	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19																							
+Service	aade5d3b-2717-4903-8ed8-7544b47d1fc0	Gamepad																										
+Characteristic	c91e9c03-b4be-4bb2-a2a2-21f52353265a	Joystick	X		X		uint8	5	Xaxis[int16]		Yaxis[int16]		"Joystick button state [uint8]
+0 = Not detected
+1 = detected"															
+Characteristic	34afe3d1-643e-4fe7-abd2-7e7a0cfb1601	Buttons	X		X		uint8	4	"Button1 state [uint8]
+0 = Not detected
+1 = detected"	"Button2 state [uint8]
+0 = Not detected
+1 = detected"	"Button3 state [uint8]
+0 = Not detected
+1 = detected"	"Button4 state [uint8]
+0 = Not detected
+1 = detected"																

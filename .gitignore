@@ -1,0 +1,10 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Specific __pycache__ directories
+src/model/__pycache__/
+src/presenter/__pycache__/
+src/view/__pycache__/
+src/config/__pycache__/
