@@ -2,6 +2,7 @@ import customtkinter as ctk
 from src.config.app_config import AppConfig
 import time
 from datetime import datetime
+from bleak import BleakScanner
 
 class FooterComponent(ctk.CTkFrame):
     def __init__(self, parent):
@@ -16,6 +17,7 @@ class FooterComponent(ctk.CTkFrame):
         self.device_timestamp = None
         self.is_synced = False
         self.blink_state = False
+        self.loop = None  # Event loop for async operations
         self._create_footer()
         self._start_time_update()
 
@@ -28,6 +30,14 @@ class FooterComponent(ctk.CTkFrame):
             text_color=self.config.TEXT_COLOR
         )
         self.version_label.pack(side="left", padx=self.config.FOOTER_PADDING, pady=0)
+
+        self.ble_status = ctk.CTkLabel(
+            self,
+            text="BLE OFF",
+            font=self.config.LABEL_FONT,
+            text_color="red"
+        )
+        self.ble_status.pack(side="left", padx=self.config.FOOTER_PADDING, pady=0)
         
         # Create timestamp label with click binding
         self.timestamp_label = ctk.CTkLabel(
@@ -43,32 +53,51 @@ class FooterComponent(ctk.CTkFrame):
     def _start_time_update(self):
         """Start the time update cycle"""
         self._update_time()
-        self.after(300, self._start_time_update)  # Update every second
+        self._check_ble_status()
+        self.after(300, self._start_time_update)  # Update every 300ms
+        
+    async def _check_ble_status_async(self):
+        """Check BLE adapter status asynchronously"""
+        try:
+            scanner = BleakScanner()
+            await scanner.discover(timeout=0.1)
+            self.ble_status.configure(text="BLE ON", text_color=self.config.TEXT_COLOR)
+        except Exception as e:
+            error_msg = str(e)
+            if "bluetooth" in error_msg.lower() or "WinError -2147020577" in error_msg:
+                self.ble_status.configure(text="BLE OFF", text_color="red")
+            else:
+                self.ble_status.configure(text="BLE OFF", text_color="red")
+                
+    def _check_ble_status(self):
+        """Check BLE adapter status"""
+        if self.loop:
+            self.loop.create_task(self._check_ble_status_async())
         
     def _update_time(self):
         """Update the time display and check sync status"""
         current_time = datetime.now()
         
+        # Default to showing current PC time
+        display_time = current_time
+        text_color = self.config.TEXT_COLOR
+        
         if not self.is_synced and self.device_timestamp:
-            # If device time differs by more than 5 seconds, show blinking
+            # If we have device timestamp and not synced, show device time
+            display_time = datetime.fromtimestamp(self.device_timestamp)
+            
+            # Check for time drift
             time_diff = abs(time.time() - self.device_timestamp)
             if time_diff > 5:
                 # Toggle color for blinking effect
                 self.blink_state = not self.blink_state
-                color = "red" if self.blink_state else self.config.TEXT_COLOR
-                self.timestamp_label.configure(text_color=color)
+                text_color = "red" if self.blink_state else self.config.TEXT_COLOR
         
-        # Update displayed time
-        if self.is_synced:
-            # Show PC time when synced
-            self.timestamp_label.configure(
-                text=current_time.strftime('%Y-%m-%d %H:%M:%S'),
-                text_color=self.config.TEXT_COLOR
-            )
-        elif self.device_timestamp:
-            # Show device time when not synced
-            device_time = datetime.fromtimestamp(self.device_timestamp)
-            self.timestamp_label.configure(text=device_time.strftime('%Y-%m-%d %H:%M:%S'))
+        # Update the timestamp label
+        self.timestamp_label.configure(
+            text=display_time.strftime('%Y-%m-%d %H:%M:%S'),
+            text_color=text_color
+        )
             
     def set_device_timestamp(self, unix_timestamp):
         """Set the device timestamp and update display"""

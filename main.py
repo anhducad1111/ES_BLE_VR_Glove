@@ -83,7 +83,8 @@ class App:
             )
         }
         
-        # Setup timestamp click handler
+        # Setup footer and timestamp
+        self.main_view.footer.loop = self.loop
         self.main_view.footer.on_timestamp_click = lambda: self.loop.create_task(
             self._handle_timestamp_sync()
         )

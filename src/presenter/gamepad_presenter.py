@@ -50,6 +50,8 @@ class GamepadPresenter:
             self._current_joystick_data = joystick_data
             # Update view with new values
             self.view.update_xy_values(joystick_data.x, joystick_data.y)
+            # Update joystick button state
+            self.view.update_joystick_button_state(bool(joystick_data.button_state))
 
     async def _handle_buttons_update(self, sender, buttons_data):
         """Handle buttons data updates
@@ -75,3 +77,6 @@ class GamepadPresenter:
         # Reset button states
         for i in range(4):
             self.view.update_button_state(i, False)
+        
+        # Reset joystick button state
+        self.view.update_joystick_button_state(False)

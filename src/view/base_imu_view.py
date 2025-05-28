@@ -63,7 +63,6 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
         # Create Calibrate button with _on_calibrate callback
         self.button_calibrate = ButtonComponent(button_container, "Calibrate", command=self._on_calibrate)
         self.button_calibrate.grid(row=0, column=1, sticky="es", padx=(0, 10), pady=0)
-        
 
 
     def _create_sensor_frame(self, row: int, label_text: str, axis_labels: list, entry_width: int = 80) -> dict:
@@ -132,14 +131,7 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
         state = "normal" if enabled else "disabled"
         self.button_config.configure(state=state)
         self.button_calibrate.configure(state=state)
-        
-    def set_notifying_state(self, enabled):
-        """Update notification state"""
-        pass
-        
-    def update_debug_text(self, text):
-        """Update debug text (not used)"""
-        pass
+
 
     def clear_values(self):
         """Clear all displayed values"""
@@ -169,4 +161,8 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
     def _handle_calibration_start(self, dialog):
         """Handle calibration start button click"""
         # Will be implemented when calibration handling is added
+        pass
+
+    def update_debug_text(self, text):
+        """Update debug text display (empty implementation)"""
         pass

@@ -10,6 +10,7 @@ class IMUPresenter:
         self.service = ble_service
         self.view.imu_service = ble_service  # Set service for configuration
         self.view.loop = loop  # Set event loop for async operations
+        ble_service.set_loop(loop)  # Set event loop for service notifications
         self.char_uuid = characteristic_uuid
         self.euler_uuid = characteristic_uuid.replace("CHAR", "EULER")
         self.loop = loop
@@ -49,9 +50,9 @@ class IMUPresenter:
             self.char_uuid, 
             self._notification_handler
         )
+        
         if result:
             self.notifying = True
-            self.view.set_notifying_state(True)
             self.view.set_button_states(True)
             
             # Optionally start Euler notifications too
@@ -95,7 +96,6 @@ class IMUPresenter:
             result = await self.service.stop_notify(self.char_uuid)
             if result:
                 self.notifying = False
-                self.view.set_notifying_state(False)
                 self.view.set_button_states(False)
             else:
                 success = False
@@ -202,7 +202,6 @@ class IMUPresenter:
             imu_data.mag['y'], 
             imu_data.mag['z']
         )
-        self.view.update_debug_text(imu_data.to_hex_string())
         
     def is_notifying(self):
         """Check if notifications are active"""
