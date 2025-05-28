@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import asyncio
 from src.config.app_config import AppConfig
 from src.view.device_monitor_view import DeviceMonitorView
 from src.view.gamepad_view import GamepadView
@@ -37,6 +38,7 @@ class MainView:
 
     def _setup_views(self):
         """Initialize and setup application views"""
+        loop = asyncio.get_event_loop()
         self.device_monitor = DeviceMonitorView(self.window)
 
         content_frame = ctk.CTkFrame(
@@ -85,4 +87,5 @@ class MainView:
         self.sensor_view.grid(row=2, column=0, sticky="nsew", padx=(10, 0), pady=10)
 
         self.footer = FooterComponent(self.window)
+        self.footer.loop = loop  # Set the event loop for BLE status checking
         self.footer.pack(side="bottom", fill="x")

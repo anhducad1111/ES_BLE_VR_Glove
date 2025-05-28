@@ -192,6 +192,13 @@ class GamepadView(ctk.CTkFrame):
         
         self.x_entry.grid(row=0, column=0, padx=5, pady=5)
         self.y_entry.grid(row=0, column=1, padx=5, pady=5)
+        
+        self.joystick_button = ButtonComponent(
+            xy_frame,
+            "Joystick",
+            height=28,
+        )
+        self.joystick_button.grid(row=0, column=2, padx=5, pady=5)
 
     def update_xy_values(self, x: float, y: float):
         """Update the X and Y coordinate values and graph position
@@ -205,3 +212,13 @@ class GamepadView(ctk.CTkFrame):
         
         # Update graph point position
         self.graph_view.update_xy(x, y)
+
+    def update_joystick_button_state(self, is_active: bool):
+        """Update joystick button visual state
+        
+        Args:
+            is_active: True if button is pressed, False otherwise
+        """
+        self.joystick_button.configure(
+            fg_color=self.config.BUTTON_COLOR if is_active else self.config.FRAME_BG
+        )
