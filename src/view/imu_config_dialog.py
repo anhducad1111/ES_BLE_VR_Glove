@@ -174,9 +174,19 @@ class IMUConfigDialog(ctk.CTkToplevel):
         self.cancel_button.pack(side="right", padx=(0, 10))
 
     def _on_apply(self):
-        if not self._destroyed and hasattr(self, '_apply_callback'):
-            self._apply_callback()
-        self.destroy()
+        if hasattr(self, '_apply_callback'):
+            config = self.get_config_values()
+            self._apply_callback(config)
+
+    def get_config_values(self):
+        """Get all current configuration values"""
+        return {
+            'accel_gyro_rate': self.accel_gyro_rate_item.get(),
+            'mag_rate': self.mag_rate_item.get(),
+            'accel_range': self.accel_range_item.get(), 
+            'gyro_range': self.gyro_range_item.get(),
+            'mag_range': self.mag_range_item.get()
+        }
 
     def set_cancel_callback(self, callback):
         self.cancel_button.configure(command=callback)

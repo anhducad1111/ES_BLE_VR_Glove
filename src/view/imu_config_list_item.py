@@ -26,6 +26,7 @@ class IMUConfigListItem(ctk.CTkFrame):
         self.grid_columnconfigure(1, weight=1)
 
     def get(self):
+        """Get the current value from combobox"""
         return self.combobox.get()
 
     def set(self, value):

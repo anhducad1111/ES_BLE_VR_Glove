@@ -21,7 +21,27 @@ class IMU1View(BaseIMUView):
             dialog.mag_range_item.set(self.imu_service.MAG_RANGE_MAP[data[7]])  # IMU1 mag range
 
         dialog.set_cancel_callback(dialog.destroy)
-        dialog.set_apply_callback(lambda: self._handle_config_apply(dialog))
+        dialog.set_apply_callback(lambda config: self.loop.create_task(self._handle_config_apply(dialog, config)))
+
+    async def _handle_config_apply(self, dialog, config):
+        """Handle IMU1 configuration dialog apply button click"""
+        # Read current config to preserve other bytes
+        data = await self.imu_service.read_config()
+        if data:
+            # Create new config array with current config
+            new_config = bytearray(data)
+            # Update IMU1 config bytes (1,2,5,6,7)
+            new_config[1] = self.imu_service.ACCEL_GYRO_FREQ_REV_MAP[config['accel_gyro_rate']]
+            new_config[2] = self.imu_service.MAG_FREQ_REV_MAP[config['mag_rate']]  
+            new_config[5] = self.imu_service.ACCEL_RANGE_REV_MAP[config['accel_range']]
+            new_config[6] = self.imu_service.GYRO_RANGE_REV_MAP[config['gyro_range']]
+            new_config[7] = self.imu_service.MAG_RANGE_REV_MAP[config['mag_range']]
+
+            # Write updated config 
+            await self.imu_service.write_config(new_config)
+
+        # Destroy dialog after writing config
+        dialog.destroy()
 
     def _on_calibrate(self):
         """Handle IMU1 calibration button click"""
