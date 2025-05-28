@@ -3,15 +3,18 @@ from src.model.sensor import FlexSensorData, ForceSensorData
 class SensorPresenter:
     """Presenter for handling sensor data"""
     
-    def __init__(self, view, ble_service):
+    def __init__(self, view, ble_service, loop):
         """Initialize sensor presenter
         
         Args:
             view: Reference to the sensor view
             ble_service: Reference to the BLE service
+            loop: Event loop for async operations
         """
         self.view = view
         self.service = ble_service
+        self.view.service = ble_service  # Set service for configuration
+        self.view.loop = loop  # Set event loop for async operations
         self._current_flex_data = None
         self._current_force_data = None
         

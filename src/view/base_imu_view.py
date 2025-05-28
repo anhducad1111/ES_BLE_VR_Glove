@@ -7,6 +7,7 @@ from src.view.view_interfaces import IMUViewInterface
 class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
     def __init__(self, parent, title: str):
         self.config = AppConfig()  # Get singleton instance
+        self.imu_service = None  # Will be set by presenter
         super().__init__(
             parent,
             fg_color=self.config.PANEL_COLOR,
@@ -17,6 +18,7 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=0)
+        self.loop = None  # Will be set by presenter
 
         # Create header
         header_label = ctk.CTkLabel(
@@ -55,7 +57,7 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
         button_container.grid_columnconfigure((0, 1), weight=0)  # Ensure buttons stay at their minimal width
 
         # Create Configure button with _on_config callback
-        self.button_config = ButtonComponent(button_container, "Configure", command=self._on_config)
+        self.button_config = ButtonComponent(button_container, "Configure", command=self._handle_config_click)
         self.button_config.grid(row=0, column=0, sticky="es", padx=(0, 10), pady=0)
 
         # Create Calibrate button with _on_calibrate callback
@@ -146,7 +148,12 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
         self.update_magn(0, 0, 0)
         self.update_euler(0, 0, 0)  # This will set euler to 0 as implemented
 
-    def _on_config(self):
+    def _handle_config_click(self):
+        """Handle config button click by creating coroutine in event loop"""
+        if self.loop:
+            self.loop.create_task(self._on_config())
+
+    async def _on_config(self):
         """Base method for configuration button click. Override in subclasses."""
         pass
 

@@ -8,6 +8,8 @@ class IMUPresenter:
     def __init__(self, view, ble_service, characteristic_uuid, loop):
         self.view = view
         self.service = ble_service
+        self.view.imu_service = ble_service  # Set service for configuration
+        self.view.loop = loop  # Set event loop for async operations
         self.char_uuid = characteristic_uuid
         self.euler_uuid = characteristic_uuid.replace("CHAR", "EULER")
         self.loop = loop

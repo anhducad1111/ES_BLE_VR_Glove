@@ -7,6 +7,8 @@ from src.view.other_config_dialog import OtherConfigDialog
 class SensorView(ctk.CTkFrame):
     def __init__(self, parent):
         self.config = AppConfig()  # Get singleton instance
+        self.service = None  # Will be set by presenter
+        self.loop = None  # Will be set by presenter
         super().__init__(
             parent,
             fg_color=self.config.PANEL_COLOR,
@@ -80,20 +82,43 @@ class SensorView(ctk.CTkFrame):
         button_container.grid(row=2, column=0, sticky="es", padx=10, pady=(0, 20))
         button_container.grid_columnconfigure((0, 1), weight=0)
 
-        self.button_config = ButtonComponent(button_container, "Configure", command=self._on_config)
+        self.button_config = ButtonComponent(button_container, "Configure", command=self._handle_config_click)
         self.button_config.grid(row=2, column=0, sticky="es", pady=(0, 0), padx=(0, 20))
 
-    def _on_config(self):
+    async def _on_config(self):
         """Handle configuration button click"""
+        # Read current config
+        data = await self.service.read_config()
         dialog = OtherConfigDialog(self)
+        
+        if data:
+            # Get sensor update interval from bytes 11-12 (little endian)
+            interval = int.from_bytes(data[11:13], 'little')
+            dialog.rate_entry.set_value(interval, keep_editable=True)
+            
         dialog.set_cancel_callback(dialog.destroy)
-        dialog.set_apply_callback(lambda: self._handle_config_apply(dialog))
+        dialog.set_apply_callback(lambda: self.loop.create_task(self._handle_config_apply(dialog)))
 
-    def _handle_config_apply(self, dialog):
+    async def _handle_config_apply(self, dialog):
         """Handle configuration apply button click"""
-        # TODO: Get rate value and apply it
         rate = dialog.get_rate_value()
+        
+        # Read current config to preserve other bytes
+        data = await self.service.read_config()
+        if data:
+            # Create new 15-byte array with current config
+            new_config = bytearray(data)
+            # Update bytes 11-12 with new rate (little endian)
+            new_config[11:13] = rate.to_bytes(2, 'little')
+            # Write updated config
+            await self.service.write_config(new_config)
+            
         dialog.destroy()
+    def _handle_config_click(self):
+        """Handle config button click by creating coroutine in event loop"""
+        if self.loop:
+            self.loop.create_task(self._on_config())
+
     def update_flex_sensor(self, sensor_id: int, value: float):
         """Update flex sensor value"""
         if sensor_id in self.flex_entries:

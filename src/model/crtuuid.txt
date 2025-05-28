@@ -1,14 +1,116 @@
-UUID	Alias	Read	Write	Notification	Data type	Byte Length	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19																							
-Service	aade5d3b-2717-4903-8ed8-7544b47d1fc0	Gamepad																										
-Characteristic	c91e9c03-b4be-4bb2-a2a2-21f52353265a	Joystick	X		X		uint8	5	Xaxis[int16]		Yaxis[int16]		"Joystick button state [uint8]
-0 = Not detected
-1 = detected"															
-Characteristic	34afe3d1-643e-4fe7-abd2-7e7a0cfb1601	Buttons	X		X		uint8	4	"Button1 state [uint8]
-0 = Not detected
-1 = detected"	"Button2 state [uint8]
-0 = Not detected
-1 = detected"	"Button3 state [uint8]
-0 = Not detected
-1 = detected"	"Button4 state [uint8]
-0 = Not detected
-1 = detected"																
+📋 BLE Configuration Characteristic Specification
+UUID:
+Copy
+Edit
+289f76d8-2edb-455d-8c3c-aabb42ab5b5c
+Loại:
+r
+Copy
+Edit
+uint8[] — Tổng cộng: 15 bytes
+📐 Cấu trúc Payload (15 bytes)
+Byte(s)	Field	Type	Description	Allowed Values
+0	CMD	uint8	Lệnh điều khiển trạng thái hệ thống	0: IDLE
+1: RUN
+2: Calibrate IMU1
+3: Calibrate IMU2
+1	IMU1_AccelGyro_Freq	uint8	Tần số lấy dữ liệu Accel & Gyro của IMU1	Xem bảng bên dưới
+2	IMU1_Mag_Freq	uint8	Tần số lấy dữ liệu Magnetometer của IMU1	Xem bảng bên dưới
+3	IMU2_AccelGyro_Freq	uint8	Tần số lấy dữ liệu Accel & Gyro của IMU2	Xem bảng bên dưới
+4	IMU2_Mag_Freq	uint8	Tần số lấy dữ liệu Magnetometer của IMU2	Xem bảng bên dưới
+5	IMU1_Accel_Range	uint8	Dải đo gia tốc của IMU1	Xem bảng bên dưới
+6	IMU1_Gyro_Range	uint8	Dải đo con quay hồi chuyển của IMU1	Xem bảng bên dưới
+7	IMU1_Mag_Range	uint8	Dải đo từ trường của IMU1	Xem bảng bên dưới
+8	IMU2_Accel_Range	uint8	Dải đo gia tốc của IMU2	Xem bảng bên dưới
+9	IMU2_Gyro_Range	uint8	Dải đo con quay hồi chuyển của IMU2	Xem bảng bên dưới
+10	IMU2_Mag_Range	uint8	Dải đo từ trường của IMU2	Xem bảng bên dưới
+11–12	Sensor_Update_Interval	uint16	Tần suất cập nhật dữ liệu (ms) của các cảm biến phụ như joystick, flex, force, button	Giá trị: 100 → 99999
+13–14	Reserved	uint16	Không sử dụng, phải đặt thành [0x00, 0x00] để hợp lệ	Bắt buộc gửi 2 byte
+
+📊 Bảng mã cho từng cấu hình
+IMU Accel & Gyro Frequency (dùng cho byte 1 và 3)
+Value	Enum	Frequency
+0	LSM6DS_RATE_SHUTDOWN	Shutdown
+1	LSM6DS_RATE_12_5_HZ	12.5 Hz
+2	LSM6DS_RATE_26_HZ	26 Hz
+3	LSM6DS_RATE_52_HZ	52 Hz
+4	LSM6DS_RATE_104_HZ	104 Hz
+5	LSM6DS_RATE_208_HZ	208 Hz
+6	LSM6DS_RATE_416_HZ	416 Hz
+
+IMU Magnetometer Frequency (byte 2 và 4)
+Value	Enum	Frequency
+0	LIS3MDL_DATARATE_0_625_HZ	0.625 Hz
+1	LIS3MDL_DATARATE_1_25_HZ	1.25 Hz
+2	LIS3MDL_DATARATE_2_5_HZ	2.5 Hz
+3	LIS3MDL_DATARATE_5_HZ	5 Hz
+4	LIS3MDL_DATARATE_10_HZ	10 Hz
+5	LIS3MDL_DATARATE_20_HZ	20 Hz
+6	LIS3MDL_DATARATE_40_HZ	40 Hz
+7	LIS3MDL_DATARATE_80_HZ	80 Hz
+
+IMU Accel Range (byte 5 và 8)
+Value	Enum	Range
+0	LSM6DS_ACCEL_RANGE_2_G	±2G
+1	LSM6DS_ACCEL_RANGE_4_G	±4G
+2	LSM6DS_ACCEL_RANGE_8_G	±8G
+3	LSM6DS_ACCEL_RANGE_16_G	±16G
+
+IMU Gyro Range (byte 6 và 9)
+Value	Enum	Range
+0	LSM6DS_GYRO_RANGE_125_DPS	±125 dps
+1	LSM6DS_GYRO_RANGE_250_DPS	±250 dps
+2	LSM6DS_GYRO_RANGE_500_DPS	±500 dps
+3	LSM6DS_GYRO_RANGE_1000_DPS	±1000 dps
+4	LSM6DS_GYRO_RANGE_2000_DPS	±2000 dps
+
+IMU Mag Range (byte 7 và 10)
+Value	Enum	Range
+0	LIS3MDL_RANGE_4_GAUSS	±4 gauss
+1	LIS3MDL_RANGE_8_GAUSS	±8 gauss
+2	LIS3MDL_RANGE_12_GAUSS	±12 gauss
+3	LIS3MDL_RANGE_16_GAUSS	±16 gauss
+
+🧪 Ví dụ Payload (GUI tạo ra)
+Giả sử người dùng chọn:
+
+CMD: 1 (RUN)
+
+IMU1 AG: 4 (104Hz)
+
+IMU1 Mag: 3 (5Hz)
+
+IMU2 AG: 2 (26Hz)
+
+IMU2 Mag: 5 (20Hz)
+
+IMU1 Ranges: Accel 0, Gyro 2, Mag 1
+
+IMU2 Ranges: Accel 1, Gyro 3, Mag 0
+
+Sensor update: 1000 ms → 0x03E8 → [0xE8, 0x03]
+
+Reserved: [0x00, 0x00]
+
+Payload là:
+
+python
+Copy
+Edit
+[
+  1,      # CMD
+  4,      # IMU1 AG Freq
+  3,      # IMU1 Mag Freq
+  2,      # IMU2 AG Freq
+  5,      # IMU2 Mag Freq
+  0,      # IMU1 Accel Range
+  2,      # IMU1 Gyro Range
+  1,      # IMU1 Mag Range
+  1,      # IMU2 Accel Range
+  3,      # IMU2 Gyro Range
+  0,      # IMU2 Mag Range
+  0xE8,   # Update interval LSB
+  0x03,   # Update interval MSB
+  0x00,   # Reserved LSB
+  0x00    # Reserved MSB
+]

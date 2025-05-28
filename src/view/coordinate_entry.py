@@ -34,12 +34,13 @@ class CoordinateEntry(ctk.CTkFrame):
         self.entry.insert(0, "0")
         # self.entry.configure(state="readonly")
 
-    def set_value(self, value: float):
+    def set_value(self, value: float, keep_editable=False):
         """Update the coordinate value"""
+        current_state = self.entry.cget("state")
         self.entry.configure(state="normal")
         self.entry.delete(0, "end")
         self.entry.insert(0, f"{value:.2f}")
-        self.entry.configure(state="readonly")
+        self.entry.configure(state=current_state if keep_editable else "readonly")
 
     def get_value(self) -> float:
         """Get the current coordinate value"""
