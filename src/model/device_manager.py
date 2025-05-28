@@ -117,3 +117,7 @@ class DeviceManager:
             await self.presenters['connection'].disconnect()
         except Exception as e:
             print(f"Error disconnecting device: {e}")
+
+    def is_connected(self):
+        """Check if device is connected"""
+        return self.service and self.service.is_connected()
