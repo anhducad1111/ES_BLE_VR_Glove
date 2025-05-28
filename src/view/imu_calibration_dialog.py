@@ -1,6 +1,8 @@
 import customtkinter as ctk
 from src.config.app_config import AppConfig
 from src.view.button_component import ButtonComponent
+import subprocess
+
 
 class IMUCalibrationDialog(ctk.CTkToplevel):
     def __init__(self, parent, imu_label: str):
@@ -11,6 +13,8 @@ class IMUCalibrationDialog(ctk.CTkToplevel):
         self._current_count = 10
         self._setup_window(parent)
         self._create_main_layout(imu_label)
+        self.open_tool_button = None
+
 
     def _setup_window(self, parent):
         self.title("IMU Calibration")
@@ -23,7 +27,7 @@ class IMUCalibrationDialog(ctk.CTkToplevel):
         self._make_modal(parent)
         
         # Force as top-level window
-        self.attributes('-topmost', True)
+        # self.attributes('-topmost', True)
         
     def _center_window(self, parent):
         """Center the dialog on the main window"""
@@ -140,19 +144,37 @@ class IMUCalibrationDialog(ctk.CTkToplevel):
             state="disabled"
         )
         self.stop_button.pack(side="right", padx=10)
+        
+    def _launch_tool(self):
+        try:
+            subprocess.Popen(["MotionCal.exe"], shell=True)
+        except Exception as e:
+            print(f"[ERROR] Cannot launch MotionCal.exe: {e}")
+        
 
     def _update_countdown(self):
-        """Update the countdown display"""
         if not self._countdown_running:
             return
-            
+
         if self._current_count >= 0:
             self.status_label.configure(text=str(self._current_count))
             self._current_count -= 1
             self.after(1000, self._update_countdown)
         else:
-            self.status_label.configure(text="OPEN TOOL")
+            self.status_label.pack_forget()  # Ẩn label đếm ngược
+
+            self.open_tool_button = ButtonComponent(
+                self.status_label.master,
+                "OPEN TOOL",
+                command=self._launch_tool,
+                fg_color="transparent",
+                hover_color="#333333",
+                text_color="#00FF00",  # xanh lá nổi bật
+                font=("Inter Bold", 18)
+            )
+            self.open_tool_button.pack()
             self._on_stop()
+
 
     def _on_start(self):
         """Handle start button click"""
