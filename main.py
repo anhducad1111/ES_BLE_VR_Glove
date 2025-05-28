@@ -73,11 +73,13 @@ class App:
             ),
             'sensor': SensorPresenter(
                 self.main_view.sensor_view,
-                self.ble_service
+                self.ble_service,
+                self.loop
             ),
             'gamepad': GamepadPresenter(
                 self.main_view.gamepad_view,
-                self.ble_service
+                self.ble_service,
+                self.loop
             )
         }
         

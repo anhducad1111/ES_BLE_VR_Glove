@@ -8,6 +8,8 @@ from src.view.other_config_dialog import OtherConfigDialog
 class GamepadView(ctk.CTkFrame):
     def __init__(self, parent):
         self.config = AppConfig()  # Get singleton instance
+        self.service = None  # Will be set by presenter
+        self.loop = None  # Will be set by presenter
         super().__init__(
             parent,
             fg_color=self.config.PANEL_COLOR,
@@ -103,20 +105,43 @@ class GamepadView(ctk.CTkFrame):
         # The last button frame needs different padding
         self.button_frames[-1].grid(padx=0)  # Remove right padding for last button
 
-        self.button_config = ButtonComponent(button_container, "Configure", command=self._on_config)
+        self.button_config = ButtonComponent(button_container, "Configure", command=self._handle_config_click)
         self.button_config.grid(row=1, column=0, columnspan=8,
                               sticky="es", padx=(0, 5), pady=20)
 
-    def _on_config(self):
-        """Handle configuration button click"""
-        dialog = OtherConfigDialog(self)
-        dialog.set_cancel_callback(dialog.destroy)
-        dialog.set_apply_callback(lambda: self._handle_config_apply(dialog))
+    def _handle_config_click(self):
+        """Handle config button click by creating coroutine in event loop"""
+        if self.loop:
+            self.loop.create_task(self._on_config())
 
-    def _handle_config_apply(self, dialog):
+    async def _on_config(self):
+        """Handle configuration button click"""
+        # Read current config
+        data = await self.service.read_config()
+        dialog = OtherConfigDialog(self)
+        
+        if data:
+            # Get sensor update interval from bytes 11-12 (little endian)
+            interval = int.from_bytes(data[11:13], 'little')
+            dialog.rate_entry.set_value(interval, keep_editable=True)
+            
+        dialog.set_cancel_callback(dialog.destroy)
+        dialog.set_apply_callback(lambda: self.loop.create_task(self._handle_config_apply(dialog)))
+
+    async def _handle_config_apply(self, dialog):
         """Handle configuration apply button click"""
-        # TODO: Get rate value and apply it
         rate = dialog.get_rate_value()
+        
+        # Read current config to preserve other bytes
+        data = await self.service.read_config()
+        if data:
+            # Create new 15-byte array with current config
+            new_config = bytearray(data)
+            # Update bytes 11-12 with new rate (little endian)
+            new_config[11:13] = rate.to_bytes(2, 'little')
+            # Write updated config
+            await self.service.write_config(new_config)
+            
         dialog.destroy()
         
     def set_button_states(self, enabled):

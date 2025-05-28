@@ -13,12 +13,18 @@ class IMUCalibrationDialog(ctk.CTkToplevel):
         self._create_main_layout(imu_label)
 
     def _setup_window(self, parent):
-        self.overrideredirect(False)  
-        self.configure(fg_color="#1F1F1F")
-        self.geometry("400x300")  
+        self.title("IMU Calibration")
+        self.overrideredirect(False)  # Keep window decorations
+        self.configure(fg_color="#1F1F1F")  # Dark background
+        self.geometry("500x320")  # Adjust size as needed
+        self.resizable(False, False)  # Fix window size
+        self.protocol("WM_DELETE_WINDOW", self.destroy)  # Handle window close button
         self._center_window(parent)
         self._make_modal(parent)
-
+        
+        # Force as top-level window
+        self.attributes('-topmost', True)
+        
     def _center_window(self, parent):
         """Center the dialog on the main window"""
         # Get the root window (main window)

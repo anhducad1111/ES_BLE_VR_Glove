@@ -90,10 +90,10 @@ class OtherConfigDialog(ctk.CTkToplevel):
         description.pack(anchor="w", pady=(0, 10))
 
         # Rate input field with label
-        self.rate_entry = CoordinateEntry(rate_content, "Joystick, flex, force sensor cap buttons", entry_width=120)
+        self.rate_entry = CoordinateEntry(rate_content, "Joystick, flex, force sensor cap buttons", entry_width=120, )
         self.rate_entry.pack(anchor="w")
-        self.rate_entry.entry.configure(state="normal")  # Cho phép chỉnh sửa
-        self.rate_entry.set_value(1000)  # Default value
+        self.rate_entry.entry.configure(state="normal")  # Set initial state to editable
+        self.rate_entry.set_value(1000, keep_editable=True)  # Set default value and keep editable
 
         # Right-aligned button container
         button_container = ctk.CTkFrame(content, fg_color="transparent")

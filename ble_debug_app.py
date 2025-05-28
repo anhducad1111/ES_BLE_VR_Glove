@@ -3,7 +3,6 @@ import customtkinter as ctk
 from bleak import BleakClient, BleakScanner
 from src.config.app_config import AppConfig
 from src.view.connection_dialog import ConnectionDialog
-from src.view.connection_status_dialog import ConnectionStatusDialog
 from src.model.ble_service import BLEDeviceInfo
 
 class BLEDebugService:

@@ -3,15 +3,18 @@ from src.model.gamepad import JoystickData, ButtonsData
 class GamepadPresenter:
     """Presenter for handling gamepad data"""
     
-    def __init__(self, view, ble_service):
+    def __init__(self, view, ble_service, loop):
         """Initialize gamepad presenter
         
         Args:
             view: Reference to the gamepad view
             ble_service: Reference to the BLE service
+            loop: Event loop for async operations
         """
         self.view = view
         self.service = ble_service
+        self.view.service = ble_service  # Set service for configuration
+        self.view.loop = loop  # Set event loop for async operations
         self._current_joystick_data = None
         self._current_buttons_data = None
         
