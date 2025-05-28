@@ -1,4 +1,5 @@
 from bleak import BleakScanner, BleakClient
+import asyncio
 from src.model.imu import IMUData
 from src.model.timestamp import TimestampData
 
@@ -75,6 +76,22 @@ class BLEService(BLEProfileChecker):
         try:
             self.client = BleakClient(device_info.address)
             await self.client.connect()
+            if not self.client.is_connected:
+                return False
+                
+            # Wait for service discovery
+            max_retries = 3
+            for attempt in range(max_retries):
+                await asyncio.sleep(0.5)
+                if self.client.services:
+                    break
+                if attempt < max_retries - 1:
+                    print("Waiting for services...")
+                    
+            if not self.client.services:
+                print("No services discovered")
+                return False
+                    
             self._connected = True
             self.connected_device = device_info
             return True
