@@ -135,14 +135,30 @@ class App:
     
     def _on_closing(self):
         """Handle application shutdown"""
-        try:
-            # Run cleanup and shutdown
-            self.loop.run_until_complete(self.device_manager.disconnect())
-            self.loop.stop()
-            self.window.quit()
-        except Exception as e:
-            print(f"Error during application shutdown: {e}")
-            self.window.quit()
+        from src.view.exit_confirmation_dialog import ExitConfirmationDialog
+        dialog = ExitConfirmationDialog(self.window)
+        
+        async def handle_exit():
+            """Handle exit confirmation"""
+            try:
+                if self.ble_service.is_connected():
+                    # Show disconnecting status
+                    dialog.yes_btn.configure(state="disabled", text="Disconnecting...")
+                    
+                    # Run cleanup and disconnect
+                    await self.device_manager.disconnect()
+                else:
+                    # No device connected, just quit
+                    dialog.yes_btn.configure(state="disabled")
+                
+                # Stop event loop and quit
+                self.loop.stop()
+                self.window.quit()
+            except Exception as e:
+                print(f"Error during application shutdown: {e}")
+                self.window.quit()
+                
+        dialog.set_on_yes_callback(lambda: self.loop.create_task(handle_exit()))
 
     def run(self):
         """Start the application"""
