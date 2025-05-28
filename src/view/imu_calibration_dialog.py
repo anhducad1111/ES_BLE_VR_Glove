@@ -173,20 +173,30 @@ class IMUCalibrationDialog(ctk.CTkToplevel):
                 font=("Inter Bold", 18)
             )
             self.open_tool_button.pack()
-            self._on_stop()
+
+            # ✅ Enable STOP button tại đây
+            self.stop_button.configure(
+                state="normal",
+                fg_color="#FF4B4B",
+                hover_color="#CC0000"
+            )
+
 
 
     def _on_start(self):
         """Handle start button click"""
         self.start_button.configure(state="disabled")
+
         self.stop_button.configure(
-            state="normal",
+            state="disabled",
             fg_color="#666666",
-            hover_color="#777777"
+            hover_color="#666666"
         )
+
         self._countdown_running = True
         self._current_count = 10
         self._update_countdown()
+
 
     def _on_stop(self):
         """Handle stop button click"""
