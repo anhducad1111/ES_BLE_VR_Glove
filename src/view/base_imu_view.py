@@ -61,7 +61,7 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
             button_container,
             text="Calib Status: --",
             font=self.config.LABEL_FONT,
-            text_color="#FFD700"  # Gold color
+            text_color="#FFFFFF"  # Gold color
         )
         self.calib_status_label.grid(row=0, column=0, sticky="w", padx=10)
 
@@ -147,7 +147,8 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
         self.update_accel(0, 0, 0)
         self.update_gyro(0, 0, 0)
         self.update_magn(0, 0, 0)
-        self.update_euler(0, 0, 0)  # This will set euler to 0 as implemented
+        self.update_euler(0, 0, 0)  
+        self.update_calib_status("--")
 
     def _handle_config_click(self):
         """Handle config button click by creating coroutine in event loop"""

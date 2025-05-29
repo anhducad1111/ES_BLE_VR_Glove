@@ -25,30 +25,20 @@ class OverallStatus:
             print("No overall status data received")
             return None
             
-        # Print raw data for debugging
-        debug_hex = ' '.join(f'{b:02x}' for b in data)
-        print(f"Overall status raw data: {debug_hex}")
-            
         if len(data) != 4:  # 4 uint8 values
-            print(f"Invalid overall status data length: {len(data)}")
             return None
             
         try:
-            # Get values and validate ranges
             status_code = data[0]
             fuelgause = data[1]
             imu1 = data[2]
             imu2 = data[3]
             
-            # Validate status values
             valid_states = {cls.NOT_DETECT, cls.FAILED, cls.IDLE, cls.RUNNING}
             if (fuelgause not in valid_states or 
                 imu1 not in valid_states or 
                 imu2 not in valid_states):
-                print(f"Invalid status values: fuelgause={fuelgause}, imu1={imu1}, imu2={imu2}")
                 return None
-
-            print(f"Creating OverallStatus: code={status_code}, fuel={fuelgause}, imu1={imu1}, imu2={imu2}")
             return cls(
                 fuelgause=fuelgause,
                 imu1=imu1,
