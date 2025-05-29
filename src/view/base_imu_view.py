@@ -30,7 +30,7 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
         header_label.grid(row=0, column=0, sticky="nw", padx=12, pady=(12, 0))
 
         # Create main data frame
-        self.data_frame = ctk.CTkFrame(self, width=0)
+        self.data_frame = ctk.CTkFrame(self, width=0, fg_color="transparent")
         self.data_frame.grid(row=1, column=0, sticky="nsew",
                              padx=(12, 0), pady=(0, 12))
         self.data_frame.grid_columnconfigure(0, weight=0)

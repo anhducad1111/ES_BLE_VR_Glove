@@ -45,6 +45,6 @@ class IMU2View(BaseIMUView):
 
     def _on_calibrate(self):
         """Handle IMU2 calibration button click"""
-        dialog = IMUCalibrationDialog(self, "IMU2")
+        dialog = IMUCalibrationDialog(self, "IMU2", self.imu_service)
         dialog.set_cancel_callback(dialog.destroy)
         dialog.set_start_callback(lambda: self._handle_calibration_start(dialog))
