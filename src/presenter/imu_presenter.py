@@ -173,13 +173,15 @@ class IMUPresenter:
             self.log_dialog.log_imu_data(imu_number, self.latest_imu_data, self.latest_euler_data)
 
     async def _update_euler_async(self, euler_data):
-        """Update view with Euler angles asynchronously"""
+        """Update view with Euler angles and calibration status asynchronously"""
         if hasattr(self.view, 'update_euler'):
             self.view.update_euler(
                 euler_data.euler['pitch'],
                 euler_data.euler['roll'],
                 euler_data.euler['yaw']
             )
+            if hasattr(self.view, 'update_calib_status'):
+                self.view.update_calib_status(euler_data.calib_status)
             
     async def _update_view_async(self, imu_data):
         """Update view asynchronously (safe for callbacks)"""

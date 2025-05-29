@@ -54,15 +54,24 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
             height=28,
         )
         button_container.grid(row=2, column=0, sticky="es", padx=10, pady=(0, 20))
-        button_container.grid_columnconfigure((0, 1), weight=0)  # Ensure buttons stay at their minimal width
+        button_container.grid_columnconfigure(2, weight=1)  # Allow space between status and buttons
+
+        # Create calibration status label (left-aligned)
+        self.calib_status_label = ctk.CTkLabel(
+            button_container,
+            text="Calib Status: --",
+            font=self.config.LABEL_FONT,
+            text_color="#FFD700"  # Gold color
+        )
+        self.calib_status_label.grid(row=0, column=0, sticky="w", padx=10)
 
         # Create Configure button with _on_config callback
         self.button_config = ButtonComponent(button_container, "Configure", command=self._handle_config_click)
-        self.button_config.grid(row=0, column=0, sticky="es", padx=(0, 10), pady=0)
+        self.button_config.grid(row=0, column=3, sticky="e", padx=(0, 10), pady=0)
 
         # Create Calibrate button with _on_calibrate callback
         self.button_calibrate = ButtonComponent(button_container, "Calibrate", command=self._on_calibrate)
-        self.button_calibrate.grid(row=0, column=1, sticky="es", padx=(0, 10), pady=0)
+        self.button_calibrate.grid(row=0, column=4, sticky="e", padx=(0, 10), pady=0)
 
 
     def _create_sensor_frame(self, row: int, label_text: str, axis_labels: list, entry_width: int = 80) -> dict:
@@ -162,6 +171,10 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
         """Handle calibration start button click"""
         # Will be implemented when calibration handling is added
         pass
+
+    def update_calib_status(self, status: int):
+        """Update calibration status display"""
+        self.calib_status_label.configure(text=f"Calib Status: {status}")
 
     def update_debug_text(self, text):
         """Update debug text display (empty implementation)"""
