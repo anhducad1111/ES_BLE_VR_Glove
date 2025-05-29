@@ -17,7 +17,7 @@ class ConnectionStatusDialog(ctk.CTkToplevel):
         
     def _setup_window(self):
         """Configure dialog window"""
-        self.overrideredirect(True)
+        self.overrideredirect(False)
         # Configure window appearance
         self.configure(fg_color=("#2B2D30", "#2B2D30"))
         self.title("Connecting")

@@ -13,8 +13,8 @@ class GraphView(ctk.CTkFrame):
         self.ax.set_facecolor(bg_color)  # Set plot background
         
         # Configure axis limits and appearance
-        self.ax.set_xlim(0, 32767)
-        self.ax.set_ylim(0, 32767)
+        self.ax.set_xlim(0, 16000)
+        self.ax.set_ylim(0, 16000)
         self.ax.tick_params(colors='white')  # Make ticks white
         self.ax.grid(True, color='gray', alpha=0.3)  # Add subtle grid
         

@@ -152,7 +152,7 @@ class ConnectionDialog(ctk.CTkToplevel):
                 self.scan_btn.configure(state="normal", text="Scan Again")
 
     def _setup_window(self, parent):
-        self.overrideredirect(True)
+        self.overrideredirect(False)
         self.configure(fg_color=("#2B2D30", "#2B2D30"))
         self.geometry("569x443")
         self._center_window(parent)
