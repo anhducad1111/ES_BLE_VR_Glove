@@ -83,15 +83,26 @@ class FooterComponent(ctk.CTkFrame):
         text_color = self.config.TEXT_COLOR
         
         if not self.is_synced and self.device_timestamp:
-            # If we have device timestamp and not synced, show device time
-            display_time = datetime.fromtimestamp(self.device_timestamp)
-            
-            # Check for time drift
-            time_diff = abs(time.time() - self.device_timestamp)
-            if time_diff > 5:
-                # Toggle color for blinking effect
-                self.blink_state = not self.blink_state
-                text_color = "red" if self.blink_state else self.config.TEXT_COLOR
+            try:
+                # Validate timestamp before conversion
+                if isinstance(self.device_timestamp, (int, float)) and 0 <= self.device_timestamp <= 32503680000:  # Max timestamp for year 3000
+                    # If we have valid device timestamp and not synced, show device time
+                    display_time = datetime.fromtimestamp(self.device_timestamp)
+                    
+                    # Check for time drift
+                    time_diff = abs(time.time() - self.device_timestamp)
+                    if time_diff > 5:
+                        # Toggle color for blinking effect
+                        self.blink_state = not self.blink_state
+                        text_color = "red" if self.blink_state else self.config.TEXT_COLOR
+                else:
+                    # Invalid timestamp, show current time in red
+                    text_color = "red"
+                    print(f"Invalid timestamp value: {self.device_timestamp}")
+            except (ValueError, OSError, OverflowError) as e:
+                # Any conversion error, show current time in red
+                text_color = "red"
+                print(f"Error converting timestamp: {e}")
         
         # Update the timestamp label
         self.timestamp_label.configure(
