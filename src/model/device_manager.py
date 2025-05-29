@@ -29,27 +29,23 @@ class DeviceManager:
             if name not in self.presenters:
                 raise KeyError(f"Missing required presenter: {name}")
 
-    async def _start_service_with_retry(self, service_name, max_retries=3, delay=0.5):
-        """Start a service with retry logic"""
+    async def _start_service_with_retry(self, service_name, max_retries=5, delay=0.2):
+        """Start a service with retry logic and delay"""
         for attempt in range(max_retries):
             try:
                 if await self.presenters[service_name].start_notifications():
-                    print(f"✓ Started {service_name} notifications")
                     return True
-                print(f"Retrying {service_name} notifications ({attempt + 1}/{max_retries})")
                 await asyncio.sleep(delay)
-            except Exception as e:
-                print(f"Error starting {service_name} notifications: {e}")
+            except Exception:
                 if attempt < max_retries - 1:
                     await asyncio.sleep(delay)
-        print(f"❌ Failed to start {service_name} notifications after {max_retries} attempts")
         return False
 
     async def start_services(self):
         """Start all device services after connection with improved error handling"""
         try:
             # Wait for services to be fully discovered
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.5)
 
             # Start services in sequence with delays
             services = [
@@ -64,29 +60,19 @@ class DeviceManager:
             for service in services:
                 if not await self._start_service_with_retry(service):
                     failures.append(service)
-                await asyncio.sleep(0.5)  # Delay between services
+                await asyncio.sleep(0.3)  # Delay between services
 
             # Even if some services fail, try to read timestamp
             await self.presenters['timestamp'].read_timestamp()
 
-            # Return true only if all critical services started
-            critical_services = {'imu1', 'imu2'}  # IMU services are critical
-            failed_critical = critical_services.intersection(failures)
-            
-            if failed_critical:
-                print(f"Critical IMU service(s) failed to start: {', '.join(failed_critical)}")
+            # Handle critical services
+            critical_services = {'imu1', 'imu2'}
+            if critical_services.intersection(failures):
                 await self.cleanup()
                 return False
-                
-            if failures:
-                # Log non-critical failures but continue
-                non_critical = set(failures) - critical_services
-                if non_critical:
-                    print(f"Non-critical services failed to start: {', '.join(non_critical)}")
             return True
 
-        except Exception as e:
-            print(f"Error starting device services: {e}")
+        except Exception:
             await self.cleanup()
             return False
             
@@ -113,19 +99,11 @@ class DeviceManager:
             self.presenters['gamepad'].clear_values()
             self.presenters['overall_status'].clear_status()
             
-        except Exception as e:
-            print(f"Error during device cleanup: {e}")
+        except Exception:
+            pass
 
     async def connect(self, device_info):
-        """Connect to a device and start services
-        
-        Args:
-            device_info: Dictionary containing device info
-        
-        Returns:
-            bool: True if connection and service start successful
-        """
-        # Convert device_info dict to BLEDeviceInfo
+        """Connect to device and start services"""
         from src.model.ble_service import BLEDeviceInfo
         ble_device = BLEDeviceInfo(
             address=device_info['address'],
@@ -134,26 +112,19 @@ class DeviceManager:
         )
         
         try:
-            # Connect to device
-            success = await self.presenters['connection'].connect_to_device(ble_device)
-            if success:
-                # Start device services
+            if await self.presenters['connection'].connect_to_device(ble_device):
                 return await self.start_services()
             return False
-            
-        except Exception as e:
-            print(f"Error connecting to device: {e}")
+        except Exception:
             return False
 
     async def disconnect(self):
         """Disconnect from device and cleanup"""
         try:
-            # Stop all services
             await self.cleanup()
-            # Disconnect from device
             await self.presenters['connection'].disconnect()
-        except Exception as e:
-            print(f"Error disconnecting device: {e}")
+        except Exception:
+            pass
 
     def is_connected(self):
         """Check if device is connected"""

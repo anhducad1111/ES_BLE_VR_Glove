@@ -20,23 +20,16 @@ class TimestampData:
     @classmethod
     def from_bytes(cls, data):
         """Create TimestampData object from byte array"""
-        if not data:
-            print("No timestamp data received")
-            return None
-
-        if len(data) != 8:  # Must be 64-bit timestamp
-            print(f"Invalid timestamp data length: {len(data)}")
+        if not data or len(data) != 8:  # Must be 64-bit timestamp
             return None
             
         try:
             timestamp = int.from_bytes(data, byteorder='little')
             # Convert milliseconds to seconds and ensure valid range
             if timestamp > 32503680000000:  # Max valid ms timestamp (year 3000)
-                print(f"Timestamp too large: {timestamp} ms")
                 return None
             
             unix_timestamp = timestamp // 1000  # Convert ms to seconds
-            print(f"Converting timestamp: {timestamp} ms -> {unix_timestamp} s")
             return cls(unix_timestamp=unix_timestamp, raw_data=data)
         except Exception as e:
             print(f"Error parsing timestamp data: {e}")
