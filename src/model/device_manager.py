@@ -1,3 +1,4 @@
+import asyncio
 class DeviceManager:
     """Class for managing device services and notifications"""
     
@@ -28,26 +29,62 @@ class DeviceManager:
             if name not in self.presenters:
                 raise KeyError(f"Missing required presenter: {name}")
 
+    async def _start_service_with_retry(self, service_name, max_retries=3, delay=0.5):
+        """Start a service with retry logic"""
+        for attempt in range(max_retries):
+            try:
+                if await self.presenters[service_name].start_notifications():
+                    print(f"✓ Started {service_name} notifications")
+                    return True
+                print(f"Retrying {service_name} notifications ({attempt + 1}/{max_retries})")
+                await asyncio.sleep(delay)
+            except Exception as e:
+                print(f"Error starting {service_name} notifications: {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(delay)
+        print(f"❌ Failed to start {service_name} notifications after {max_retries} attempts")
+        return False
+
     async def start_services(self):
-        """Start all device services after connection"""
+        """Start all device services after connection with improved error handling"""
         try:
-            # Start overall status notifications first
-            await self.presenters['overall_status'].start_notifications()
-            
-            # Start IMU notifications
-            await self.presenters['imu1'].start_notifications()
-            await self.presenters['imu2'].start_notifications()
-            
-            # Start sensor notifications
-            await self.presenters['sensor'].start_notifications()
-            
-            # Start gamepad notifications
-            await self.presenters['gamepad'].start_notifications()
-            
-            # Read initial device timestamp
+            # Wait for services to be fully discovered
+            await asyncio.sleep(1.0)
+
+            # Start services in sequence with delays
+            services = [
+                'overall_status',  # Start first for device monitoring
+                'imu1',           # IMU services first
+                'imu2',
+                'sensor',         # Then sensors
+                'gamepad'         # Finally gamepad
+            ]
+
+            failures = []
+            for service in services:
+                if not await self._start_service_with_retry(service):
+                    failures.append(service)
+                await asyncio.sleep(0.5)  # Delay between services
+
+            # Even if some services fail, try to read timestamp
             await self.presenters['timestamp'].read_timestamp()
+
+            # Return true only if all critical services started
+            critical_services = {'imu1', 'imu2'}  # IMU services are critical
+            failed_critical = critical_services.intersection(failures)
             
+            if failed_critical:
+                print(f"Critical IMU service(s) failed to start: {', '.join(failed_critical)}")
+                await self.cleanup()
+                return False
+                
+            if failures:
+                # Log non-critical failures but continue
+                non_critical = set(failures) - critical_services
+                if non_critical:
+                    print(f"Non-critical services failed to start: {', '.join(non_critical)}")
             return True
+
         except Exception as e:
             print(f"Error starting device services: {e}")
             await self.cleanup()
