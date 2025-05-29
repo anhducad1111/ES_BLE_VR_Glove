@@ -9,6 +9,7 @@ from src.view.imu_log_dialog import IMULogDialog
 from src.model.imu_logger import IMULogger
 import os
 import datetime
+import time
 
 class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
     """View class for monitoring device information"""
@@ -28,6 +29,9 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         self.imu2_presenter = None
         self.selected_folder = None
         self.imu_logger = None
+        self.last_battery_notification = None
+        self.reconnect_button = None
+        self.notification_check_timer = None
         
         self._create_layout()
         # Initially hide log button
@@ -39,7 +43,27 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
 
     async def update_charging(self, state):
         """Update charging state"""
+        # Update last notification time
+        self.last_battery_notification = time.time()
+        # Start timer if not already running
+        if not self.notification_check_timer:
+            self.notification_check_timer = self.after(3000, self._check_notification_timeout)
         self.update_value("charging", state)
+
+    def _check_notification_timeout(self):
+        """Check if battery notification timeout occurred"""
+        if self.is_connected and self.last_battery_notification:
+            current_time = time.time()
+            if current_time - self.last_battery_notification > 3:
+                # Show reconnect UI
+                self.device_button.configure(fg_color="red")
+                self.reconnect_button.grid()
+            # Schedule next check
+            self.notification_check_timer = self.after(3000, self._check_notification_timeout)
+
+    def _handle_reconnect(self):
+        """Handle reconnect button click"""
+        print("Reconnect clicked")
 
     def _create_layout(self):
         """Create the main layout of the view"""
@@ -88,19 +112,30 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         )
         button_container.grid(row=0, column=9, rowspan=3, columnspan=3, sticky="e", padx=2, pady=2)
 
+        # Create reconnect button (initially hidden)
+        self.reconnect_button = ButtonComponent(
+            button_container,
+            "Reconnect",
+            command=self._handle_reconnect,
+            fg_color="green",
+            hover_color="darkgreen"
+        )
+        self.reconnect_button.grid(row=1, column=0, padx=(12, 12))
+        self.reconnect_button.grid_remove()  # Initially hidden
+
         self.device_button = ButtonComponent(
             button_container,
             "Add device",
             command=self._handle_device_button
         )
-        self.device_button.grid(row=1, column=0, padx=12)
+        self.device_button.grid(row=1, column=1, padx=12)
         
         self.log_button = ButtonComponent(
             button_container,
             "Log",
             command=self._on_log
         )
-        self.log_button.grid(row=2, column=0, padx=12, pady=(12, 0))
+        self.log_button.grid(row=2, column=1, columnspan=2, padx=12, pady=(12, 0))
         
     def _create_info_fields(self):
         """Create the information fields grid"""
@@ -272,6 +307,13 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
     def update_connection_status(self, connected, device_info=None, message=""):
         """Update connection status display (required by ConnectionViewInterface)"""
         self.is_connected = connected
+        
+        # Reset notification tracking
+        self.last_battery_notification = None
+        if self.notification_check_timer:
+            self.after_cancel(self.notification_check_timer)
+            self.notification_check_timer = None
+        self.reconnect_button.grid_remove()
         
         if connected:
             self.show_log_button(True)  # Show log button when connected
