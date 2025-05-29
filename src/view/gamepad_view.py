@@ -195,7 +195,7 @@ class GamepadView(ctk.CTkFrame):
         
         self.joystick_button = ButtonComponent(
             xy_frame,
-            "Joystick",
+            "JS Button",
             height=28,
         )
         self.joystick_button.grid(row=0, column=2, padx=5, pady=5)
