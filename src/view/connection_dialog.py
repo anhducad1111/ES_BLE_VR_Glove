@@ -152,9 +152,12 @@ class ConnectionDialog(ctk.CTkToplevel):
                 self.scan_btn.configure(state="normal", text="Scan Again")
 
     def _setup_window(self, parent):
-        self.overrideredirect(False)
-        self.configure(fg_color=("#2B2D30", "#2B2D30"))
-        self.geometry("569x443")
+        self.title("Connect to Device")
+        self.overrideredirect(False)  # Keep window decorations
+        self.configure(fg_color="#1F1F1F")  # Dark background
+        self.geometry("569x443")  # Adjust size as needed
+        self.resizable(False, False)  # Fix window size
+        self.protocol("WM_DELETE_WINDOW", self.destroy)  # Handle window close button
         self._center_window(parent)
         self._make_modal(parent)
 

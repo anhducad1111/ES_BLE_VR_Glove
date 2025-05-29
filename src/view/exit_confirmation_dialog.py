@@ -20,12 +20,14 @@ class ExitConfirmationDialog(ctk.CTkToplevel):
         
     def _setup_window(self, parent):
         """Setup window properties"""
-        self.overrideredirect(True)  # Remove title bar
-        self.geometry("400x200")
-        self.configure(fg_color=self.config.BACKGROUND_COLOR)
-        self.transient(parent)
-        self.grab_set()
+        self.title("Exit Application")
+        self.overrideredirect(False)  # Keep window decorations
+        self.configure(fg_color="#1F1F1F")  # Dark background
+        self.geometry("400x200")  # Adjust size as needed
+        self.resizable(False, False)  # Fix window size
+        self.protocol("WM_DELETE_WINDOW", self.destroy)  # Handle window close button
         self._center_window(parent)
+        self.attributes("-topmost", True)  # Keep on top
         
         # Add border frame
         border_frame = ctk.CTkFrame(

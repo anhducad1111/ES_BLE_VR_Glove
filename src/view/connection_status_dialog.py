@@ -17,11 +17,12 @@ class ConnectionStatusDialog(ctk.CTkToplevel):
         
     def _setup_window(self):
         """Configure dialog window"""
-        self.overrideredirect(False)
-        # Configure window appearance
-        self.configure(fg_color=("#2B2D30", "#2B2D30"))
         self.title("Connecting")
-        self.geometry("400x200")
+        self.overrideredirect(False)  # Keep window decorations
+        self.configure(fg_color="#1F1F1F")  # Dark background
+        self.geometry("400x200")  # Adjust size as needed
+        self.resizable(False, False)  # Fix window size
+        self.protocol("WM_DELETE_WINDOW", self.destroy)  # Handle window close button
         self._center_window()
         self._make_modal()
         
