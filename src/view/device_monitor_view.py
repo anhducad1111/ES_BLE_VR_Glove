@@ -32,6 +32,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         self.last_battery_notification = None
         self.reconnect_button = None
         self.notification_check_timer = None
+        self.current_device_address = None  # Store address for reconnection
         
         self._create_layout()
         # Initially hide log button
@@ -63,7 +64,15 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
 
     def _handle_reconnect(self):
         """Handle reconnect button click"""
-        print("Reconnect clicked")
+        if hasattr(self, 'connect_command') and self.current_device_address:
+            # Get info for last connected device
+            current_device = {
+                'name': self.value_labels['name'].cget('text'),
+                'address': self.current_device_address,
+                'rssi': 0  # RSSI not critical for reconnect
+            }
+            # Reuse existing connect flow
+            self.connect_command(current_device)
 
     def _create_layout(self):
         """Create the main layout of the view"""
@@ -316,6 +325,10 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         self.reconnect_button.grid_remove()
         
         if connected:
+            # Store device address for reconnection
+            if device_info and hasattr(device_info, 'address'):
+                self.current_device_address = device_info.address
+
             self.show_log_button(True)  # Show log button when connected
             self.log_button.configure(text="Log")  # Reset log button text
             self.selected_folder = None  # Reset folder selection

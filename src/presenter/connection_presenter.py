@@ -21,6 +21,10 @@ class ConnectionPresenter:
         
         result = await self.service.connect(device_info)
         if result:
+            # Start device services after successful connection
+            if hasattr(self.service, 'start_services'):
+                result = await self.service.start_services()
+            
             message = f"Connected to {device_info.name}"
             self.view.show_connection_status(result, device_info, message)
         else:
