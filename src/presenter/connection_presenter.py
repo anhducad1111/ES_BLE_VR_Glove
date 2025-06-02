@@ -66,37 +66,72 @@ class ConnectionPresenter:
         devices = await self.service.scan_devices()
         self.view.show_devices(devices)
         
+    async def _start_delayed_services(self, device_info, message):
+        """Start services and update views after connection delay"""
+        # 1. Start device services
+        if hasattr(self.service, 'start_services'):
+            result = await self.service.start_services()
+            if not result:
+                message = "Service initialization failed"
+                if hasattr(self.view, 'connection_dialog') and self.view.connection_dialog:
+                    self.view.connection_dialog.connection_success = False
+                    self.view.connection_dialog.status_dialog.show_failed()
+                await self.disconnect()
+                return False
+
+            # 2. Update main view after services start
+            self.view.update_connection_status(True, device_info, message)
+            self.view.start_heartbeat()
+
+            # 3. Start battery notifications last
+            await self.service.start_battery_notifications(device_info)
+
+        return True
+
     async def connect_to_device(self, device_info):
-        """Connect to selected device"""
-        # Attach view to device_info for notifications
+        """Connect to selected device with delayed main view updates"""
+        # 1. Basic connection only
         device_info.view = self.view
-        
         result = await self.service.connect(device_info)
-        if result:
-            # Start device services after successful connection
-            if hasattr(self.service, 'start_services'):
-                result = await self.service.start_services()
-                
-            if result:
-                # Start heartbeat monitoring after successful connection
-                self.view.start_heartbeat()
-            
-            message = f"Connected to {device_info.name}"
-            self.view.show_connection_status(result, device_info, message)
-        else:
+        if not result:
             message = "Connection failed"
-            self.view.show_connection_status(result, None, message)
-        return result
+            if hasattr(self.view, 'connection_dialog') and self.view.connection_dialog:
+                self.view.connection_dialog.connection_success = False
+                self.view.connection_dialog.status_dialog.show_failed()
+            return False
+
+        # 2. Show connection success in dialog immediately
+        message = f"Connected to {device_info.name}"
+        if hasattr(self.view, 'connection_dialog') and self.view.connection_dialog:
+            self.view.connection_dialog.connection_success = True
+            self.view.connection_dialog.status_dialog.show_connected(device_info)
+
+        # 3. Delay before starting services and updating main view
+        await asyncio.sleep(5)  # 5 second delay
+
+        # 4. Start delayed services and updates
+        return await self._start_delayed_services(device_info, message)
+
         
     async def disconnect(self):
         """Disconnect from current device"""
-        # Stop heartbeat monitoring before disconnecting
-        self.view.stop_heartbeat()
-        
-        # Just disconnect from device without UI updates
-        # (UI is already updated by view before this is called)
-        result = await self.service.disconnect()
-        return result
+        try:
+            # Stop heartbeat monitoring before disconnecting
+            self.view.stop_heartbeat()
+            
+            # Stop battery notifications
+            await self.service.stop_battery_notifications()
+
+            # Clear all displays including battery status
+            self.view.clear_displays()
+
+            # Disconnect from device
+            result = await self.service.disconnect()
+            return result
+            
+        except Exception as e:
+            print(f"Error during disconnect: {e}")
+            return False
         
     def is_connected(self):
         """Check if device is connected"""
