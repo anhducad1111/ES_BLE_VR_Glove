@@ -40,6 +40,31 @@ class ConnectionViewInterface(ABC):
     def clear_displays(self):
         """Clear all displays"""
         pass
+        
+    @abstractmethod
+    def set_heartbeat_handler(self, handler):
+        """Set handler for heartbeat monitoring"""
+        pass
+        
+    @abstractmethod
+    def start_heartbeat(self):
+        """Start heartbeat monitoring"""
+        pass
+        
+    @abstractmethod
+    def stop_heartbeat(self):
+        """Stop heartbeat monitoring"""
+        pass
+        
+    @abstractmethod
+    def show_connection_lost(self):
+        """Show UI elements for lost connection"""
+        pass
+        
+    @abstractmethod
+    def hide_reconnect_ui(self):
+        """Hide reconnect UI elements"""
+        pass
 
 class TimestampViewInterface(ABC):
     """Interface for timestamp display"""
