@@ -30,77 +30,111 @@ class DeviceManager:
                 raise KeyError(f"Missing required presenter: {name}")
 
     async def _start_service_with_retry(self, service_name, max_retries=5, delay=0.2):
-        """Start a service with retry logic and delay"""
+        """Start a service with retry logic and delay
+        
+        Args:
+            service_name: Name of the service to start
+            max_retries: Maximum number of retry attempts
+            delay: Delay in seconds between retries
+            
+        Returns:
+            bool: True if service started successfully, False otherwise
+        """
         for attempt in range(max_retries):
             try:
                 if await self.presenters[service_name].start_notifications():
+                    print(f"✓ Started {service_name} service (attempt {attempt + 1})")
                     return True
-                await asyncio.sleep(delay)
-            except Exception:
+                    
                 if attempt < max_retries - 1:
+                    print(f"! {service_name} service start returned False, retrying...")
                     await asyncio.sleep(delay)
+                    
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"! Error starting {service_name} service (attempt {attempt + 1}): {e}")
+                    await asyncio.sleep(delay)
+                else:
+                    print(f"✕ Failed to start {service_name} service after {max_retries} attempts: {e}")
+                    
         return False
 
     async def start_services(self):
-        """Start all device services after connection with improved error handling"""
+        """Start all device services concurrently after connection"""
         try:
             # Wait for services to be fully discovered
             await asyncio.sleep(0.5)
 
-            # Start services in sequence with delays
+            # Define services to start
             services = [
-                'overall_status',  # Start first for device monitoring
-                'imu1',           # IMU services first
+                'overall_status',  # Device monitoring
+                'imu1',           # IMU services
                 'imu2',
-                'sensor',         # Then sensors
-                'gamepad'         # Finally gamepad
+                'sensor',         # Sensors
+                'gamepad'         # Gamepad
             ]
-
+            
+            # Start all services concurrently
+            results = await asyncio.gather(
+                *[self._start_service_with_retry(service) for service in services],
+                return_exceptions=True
+            )
+            
+            # Process results and collect failures
             failures = []
-            for service in services:
-                if not await self._start_service_with_retry(service):
+            for service, result in zip(services, results):
+                if isinstance(result, Exception):
+                    print(f"Error starting {service}: {result}")
                     failures.append(service)
-                await asyncio.sleep(0.3)  # Delay between services
-
+                elif not result:
+                    failures.append(service)
+            
             # Even if some services fail, try to read timestamp
             await self.presenters['timestamp'].read_timestamp()
 
             # Handle critical services
             critical_services = {'imu1', 'imu2'}
             if critical_services.intersection(failures):
+                print(f"Critical service(s) failed: {critical_services.intersection(failures)}")
                 await self.cleanup()
                 return False
+                
             return True
 
-        except Exception:
+        except Exception as e:
+            print(f"Error during service initialization: {e}")
             await self.cleanup()
             return False
             
     async def cleanup(self):
-        """Clean up all device services"""
+        """Clean up all device services concurrently"""
         try:
-            # Stop overall status notifications first
-            await self.presenters['overall_status'].stop_notifications()
-            
-            # Stop IMU notifications
-            await self.presenters['imu1'].stop_notifications()
-            await self.presenters['imu2'].stop_notifications()
-            
-            # Stop sensor notifications
-            await self.presenters['sensor'].stop_notifications()
-            
-            # Stop gamepad notifications
-            await self.presenters['gamepad'].stop_notifications()
-            
-            # Clear displays
-            self.presenters['imu1'].view.clear_values()
-            self.presenters['imu2'].view.clear_values()
-            self.presenters['sensor'].clear_values()
-            self.presenters['gamepad'].clear_values()
-            self.presenters['overall_status'].clear_status()
-            
-        except Exception:
-            pass
+            services = [
+                'overall_status',
+                'imu1',
+                'imu2',
+                'sensor',
+                'gamepad'
+            ]
+
+            # Stop all notifications concurrently
+            await asyncio.gather(
+                *[self.presenters[service].stop_notifications() for service in services],
+                return_exceptions=True
+            )
+
+            # Clear all displays concurrently 
+            view_clearers = [
+                self.presenters['imu1'].view.clear_values(),
+                self.presenters['imu2'].view.clear_values(),
+                self.presenters['sensor'].clear_values(),
+                self.presenters['gamepad'].clear_values(),
+                self.presenters['overall_status'].clear_status()
+            ]
+            await asyncio.gather(*view_clearers, return_exceptions=True)
+
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
 
     async def connect(self, device_info):
         """Connect to device and start services"""
