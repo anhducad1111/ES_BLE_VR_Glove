@@ -141,7 +141,7 @@ class DeviceManager:
             print(f"Error during cleanup: {e}")
 
     async def connect(self, device_info):
-        """Connect to device and start services"""
+        """Connect to device only"""
         from src.model.ble_service import BLEDeviceInfo
         ble_device = BLEDeviceInfo(
             address=device_info['address'],
@@ -150,11 +150,14 @@ class DeviceManager:
         )
         
         try:
-            if await self.presenters['connection'].connect_to_device(ble_device):
-                return await self.start_services()
-            return False
+            # Only connect, don't start services
+            return await self.presenters['connection'].connect_to_device(ble_device)
         except Exception:
             return False
+
+    async def start_device_services(self):
+        """Start all device services after OK button is clicked"""
+        return await self.start_services()
 
     async def disconnect(self):
         """Disconnect from device and cleanup"""

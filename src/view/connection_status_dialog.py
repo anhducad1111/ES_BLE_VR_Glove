@@ -11,6 +11,7 @@ class ConnectionStatusDialog(ctk.CTkToplevel):
         self.parent = parent
         self._destroyed = False
         self.config = AppConfig()  # Get singleton instance
+        self.ok_callback = None
         
         self._setup_window()
         self._create_layout()
@@ -66,7 +67,7 @@ class ConnectionStatusDialog(ctk.CTkToplevel):
         self.ok_button = ButtonComponent(
             main_frame,
             button_text="OK",
-            command=self.destroy,
+            command=self._on_ok_clicked,
             width=100
         )
         self.ok_button.pack(pady=20)
@@ -88,6 +89,16 @@ class ConnectionStatusDialog(ctk.CTkToplevel):
         self.status_label.configure(text="Connection failed")
         self.ok_button.pack(pady=20)
         
+    def set_ok_callback(self, callback):
+        """Set callback for OK button click"""
+        self.ok_callback = callback
+
+    def _on_ok_clicked(self):
+        """Handle OK button click"""
+        if self.ok_callback:
+            self.ok_callback()
+        self.destroy()
+
     def destroy(self):
         """Override destroy to handle cleanup"""
         self._destroyed = True
