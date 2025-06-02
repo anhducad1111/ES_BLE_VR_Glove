@@ -93,9 +93,9 @@ class ConnectionPresenter:
         # Stop heartbeat monitoring before disconnecting
         self.view.stop_heartbeat()
         
-        # Disconnect from device
+        # Just disconnect from device without UI updates
+        # (UI is already updated by view before this is called)
         result = await self.service.disconnect()
-        self.view.show_connection_status(False, None, "Disconnected")
         return result
         
     def is_connected(self):

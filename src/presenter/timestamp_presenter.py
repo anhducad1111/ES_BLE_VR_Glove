@@ -28,12 +28,15 @@ class TimestampPresenter:
             
         timestamp = TimestampData.current()
         success = await self.service.write_characteristic(
-            self.char_uuid, 
+            self.char_uuid,
             timestamp.raw_data
         )
         
-        # If write was successful, read back the value to display it
+        # If write was successful, read back the value and update sync state
         if success:
             await self.read_timestamp()
+            # Mark time as synced in the view
+            if hasattr(self.view, 'sync_with_pc_time'):
+                self.view.sync_with_pc_time()
             
         return success

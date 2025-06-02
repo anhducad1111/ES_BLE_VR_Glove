@@ -303,8 +303,9 @@ class ConnectionDialog(ctk.CTkToplevel):
         self.connect_btn.configure(state="disabled")
         self.selected_device = None
         
-        if hasattr(self.master, 'loop'):
-            self.master.loop.create_task(self._start_scanning())
+        # Use dialog's own loop reference, not master's
+        if self.loop:
+            self.loop.create_task(self._start_scanning())
 
     def _on_connect(self):
         """Handle device connection"""

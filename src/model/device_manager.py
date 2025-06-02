@@ -89,8 +89,12 @@ class DeviceManager:
                 elif not result:
                     failures.append(service)
             
-            # Even if some services fail, try to read timestamp
+            # Read timestamp and auto-sync device time
             await self.presenters['timestamp'].read_timestamp()
+            if await self.presenters['timestamp'].write_current_time():
+                print("✓ Device time synchronized with PC")
+            else:
+                print("! Failed to synchronize device time")
 
             # Handle critical services
             critical_services = {'imu1', 'imu2'}
