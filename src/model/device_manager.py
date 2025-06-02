@@ -127,9 +127,9 @@ class DeviceManager:
             view_clearers = [
                 self.presenters['imu1'].view.clear_values(),
                 self.presenters['imu2'].view.clear_values(),
-                self.presenters['sensor'].clear_values(),
-                self.presenters['gamepad'].clear_values(),
-                self.presenters['overall_status'].clear_status()
+                self.presenters['sensor'].view.clear_values(),
+                self.presenters['gamepad'].view.clear_values(),
+                self.presenters['overall_status'].view.clear_values()
             ]
             await asyncio.gather(*view_clearers, return_exceptions=True)
 

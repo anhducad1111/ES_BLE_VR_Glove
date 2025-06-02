@@ -142,12 +142,12 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
         self.button_calibrate.configure(state=state)
 
 
-    def clear_values(self):
+    async def clear_values(self):
         """Clear all displayed values"""
         self.update_accel(0, 0, 0)
         self.update_gyro(0, 0, 0)
         self.update_magn(0, 0, 0)
-        self.update_euler(0, 0, 0)  
+        self.update_euler(0, 0, 0)
         self.update_calib_status("--")
 
     def _handle_config_click(self):

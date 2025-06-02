@@ -49,9 +49,3 @@ class OverallStatusPresenter:
                 status_data.imu1 == OverallStatus.RUNNING,
                 status_data.imu2 == OverallStatus.RUNNING
             )
-
-    def clear_status(self):
-        """Clear current status"""
-        self._current_status = None
-        if self.view:
-            self.view.update_status(False, False, False)
