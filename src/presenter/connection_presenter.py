@@ -12,18 +12,53 @@ class ConnectionPresenter:
         self.view.set_heartbeat_handler(self._check_connection)
         
     async def _check_connection(self):
-        """Periodic check of connection status using device name read"""
+        """Periodic check of connection status with auto-reconnection"""
+        MAX_RECONNECT_ATTEMPTS = 5
+        RECONNECT_DELAY = 5  # seconds
+
         while self.service.is_connected():
             try:
+                await asyncio.sleep(3)  # Check every 3 seconds
                 name = await self.service.read_device_name()
                 if not name:
+                    device_info = self.get_connected_device()
+                    if not device_info:
+                        print("No device info available for reconnection")
+                        await self.disconnect()
+                        break
+
+                    print("\nConnection lost, attempting auto-reconnection...")
                     self.view.show_connection_lost()
-                else:
-                    self.view.hide_reconnect_ui()
+
+                    # Stop services before attempting reconnection
+                    if hasattr(self.service, 'start_services'):
+                        await self.service.disconnect()
+                        await asyncio.sleep(1)  # Wait for cleanup
+
+                    # Try reconnecting up to MAX_RECONNECT_ATTEMPTS times
+                    for attempt in range(MAX_RECONNECT_ATTEMPTS):
+                        print(f"\nAuto-reconnection attempt {attempt + 1}/{MAX_RECONNECT_ATTEMPTS}")
+                        
+                        # Attempt to reconnect
+                        if await self.service.connect(device_info):
+                            # Start device services after reconnection
+                            if hasattr(self.service, 'start_services'):
+                                if await self.service.start_services():
+                                    print("Auto-reconnection successful")
+                                    break
+                            
+                        if attempt < MAX_RECONNECT_ATTEMPTS - 1:
+                            print(f"Waiting {RECONNECT_DELAY} seconds before next attempt...")
+                            await asyncio.sleep(RECONNECT_DELAY)
+                    else:
+                        print("\nAuto-reconnection failed after all attempts")
+                        await self.disconnect()
+                        break
+
             except Exception as e:
-                print(f"Connection check failed: {e}")
-                self.view.show_connection_lost()
-            await asyncio.sleep(3)  # Check every 3 seconds
+                print(f"Connection check error: {e}")
+                # Don't disconnect immediately on single error
+                continue
         
     async def scan_for_devices(self):
         """Scan for nearby BLE devices"""

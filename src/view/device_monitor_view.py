@@ -30,8 +30,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         self.imu2_presenter = None
         self.selected_folder = None
         self.imu_logger = None
-        self.reconnect_button = None
-        self.current_device_address = None  
+        self.current_device_address = None
         self._heartbeat_handler = None
         self._heartbeat_task = None
         
@@ -57,12 +56,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
     def show_connection_lost(self):
         """Show UI elements for lost connection"""
         self.device_button.configure(fg_color="red")
-        self.reconnect_button.grid()
-
-    def hide_reconnect_ui(self):
-        """Hide reconnect UI elements"""
-        self.device_button.configure(fg_color=self.config.BUTTON_COLOR)
-        self.reconnect_button.grid_remove()
 
     def update_connection_status(self, connected, device_info=None, message=""):
         """Update connection status display"""
@@ -84,8 +77,8 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             # Update button state
             self.device_button.configure(
                 text="Disconnect",
-                fg_color="darkred",
-                hover_color="#8B0000"
+                fg_color="#8B0000",
+                hover_color="#B22222"
             )
             
             # Update device info
@@ -99,8 +92,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             self.update_value("manufacturer", device_info.manufacturer if device_info else "--")
             self.update_value("hardware", device_info.hardware if device_info else "--")
 
-            # Hide reconnect UI
-            self.hide_reconnect_ui()
             
         else:
             # Stop logging if active
@@ -174,17 +165,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             fg_color="transparent"
         )
         button_container.grid(row=0, column=9, rowspan=3, columnspan=3, sticky="e", padx=2, pady=2)
-
-        # Create reconnect button (initially hidden)
-        self.reconnect_button = ButtonComponent(
-            button_container,
-            "Reconnect",
-            command=self._handle_reconnect,
-            fg_color="green",
-            hover_color="darkgreen"
-        )
-        self.reconnect_button.grid(row=1, column=0, padx=(12, 12))
-        self.reconnect_button.grid_remove()  # Initially hidden
 
         self.device_button = ButtonComponent(
             button_container,
@@ -284,21 +264,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             async def connect_wrapper():
                 await self.connect_command(device_info)
             asyncio.run_coroutine_threadsafe(connect_wrapper(), self.loop)
-
-    async def _handle_reconnect_async(self):
-        """Handle reconnect button click"""
-        if self.current_device_address and hasattr(self, 'connect_command'):
-            current_device = {
-                'name': self.value_labels['name'].cget('text'),
-                'address': self.current_device_address,
-                'rssi': 0
-            }
-            await self.connect_command(current_device)
-            
-    def _handle_reconnect(self):
-        """Button click handler for reconnect"""
-        if self.loop:
-            asyncio.run_coroutine_threadsafe(self._handle_reconnect_async(), self.loop)
 
     def set_imu_presenters(self, imu1_presenter, imu2_presenter):
         """Set IMU presenters for logging"""
