@@ -3,41 +3,50 @@ from bleak import BleakScanner
 from src.config.app_config import AppConfig
 from src.view.connection_dialog import ConnectionDialog
 from src.view.button_component import ButtonComponent
-from src.view.connection_status_dialog import ConnectionStatusDialog
 from src.view.view_interfaces import ConnectionViewInterface
 from src.view.imu_log_dialog import IMULogDialog
 from src.model.imu_logger import IMULogger
 import os
 import datetime
-import time
 import asyncio
 
 class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
     """View class for monitoring device information"""
 
+    # region Initialization
     def __init__(self, master) -> None:
+        """Initialize the device monitor view"""
         super().__init__(master, fg_color="transparent")
-        self.config = AppConfig()  # Get singleton instance
+        self.config = AppConfig()
         self.pack(fill="both", expand=True, padx=self.config.WINDOW_PADDING, pady=self.config.WINDOW_PADDING)
 
-        # Store references to value labels
+        # UI Components
+        self.info_frame = None
+        self.device_button = None
+        self.log_button = None
         self.value_labels = {}
+
+        # Connection State
         self.is_connected = False
         self.connection_dialog = None
-        self.loop = None  
-        self.log_button = None  
+        self.loop = None
+        self._destroyed = False
+        self.current_device_address = None
+        self._heartbeat_handler = None
+        self._heartbeat_task = None
+
+        # Logging State
         self.imu1_presenter = None
         self.imu2_presenter = None
         self.selected_folder = None
         self.imu_logger = None
-        self.current_device_address = None
-        self._heartbeat_handler = None
-        self._heartbeat_task = None
-        
-        self._create_layout()
-        self.show_log_button(False)  # Initially hide log button
 
-    # ConnectionViewInterface implementation
+        # Initialize UI
+        self._create_layout()
+        self.show_log_button(False)
+    # endregion
+
+    # region Connect itf
     def set_heartbeat_handler(self, handler):
         """Set handler for heartbeat monitoring"""
         self._heartbeat_handler = handler
@@ -52,7 +61,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         if self._heartbeat_task:
             self._heartbeat_task.cancel()
             self._heartbeat_task = None
-            
+
     def show_connection_lost(self):
         """Show UI elements for lost connection"""
         self.device_button.configure(fg_color="red")
@@ -86,13 +95,10 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             self.update_value("status", "Connected")
             self.update_value("battery", "--")
             self.update_value("charging", "--")
-
             self.update_value("firmware", device_info.firmware if device_info else "--")
             self.update_value("model", device_info.model if device_info else "--")
             self.update_value("manufacturer", device_info.manufacturer if device_info else "--")
             self.update_value("hardware", device_info.hardware if device_info else "--")
-
-            
         else:
             # Stop logging if active
             if self.imu_logger:
@@ -109,16 +115,11 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             )
             
             # Reset all fields
-            for field_id in self.value_labels:
-                self.update_value(field_id, "--")
+            self.clear_displays()
             self.show_log_button(False)  # Hide log button when disconnected
+    # endregion
 
-    def clear_displays(self):
-        """Clear all displays"""
-        for field_id in self.value_labels:
-            self.update_value(field_id, "--")
-
-    # View implementation
+    # region UI Layout
     def _create_layout(self):
         """Create the main layout of the view"""
         self._create_info_panel()
@@ -225,38 +226,103 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
 
         # Store reference
         self.value_labels[field_id] = value
+    # endregion
 
+    # region UI Updates
     def update_value(self, field_id, value):
         """Update the value of a specific field"""
         if field_id in self.value_labels:
             self.value_labels[field_id].configure(text=str(value))
 
+    def show_log_button(self, show: bool):
+        """Show or hide the log button"""
+        if show:
+            self.log_button.grid()
+        else:
+            self.log_button.grid_remove()
+
+    def clear_displays(self):
+        """Clear all displays"""
+        fields_to_clear = [
+            "name", "status", "battery", "charging",
+            "firmware", "model", "manufacturer", "hardware"
+        ]
+        for field_id in fields_to_clear:
+            if field_id in self.value_labels:
+                self.update_value(field_id, "--")
+    # endregion
+
+    # region Connection 
     def _handle_device_button(self):
         """Handle button click based on connection state"""
+        print(f"Device button clicked, is_connected: {self.is_connected}")
         if self.is_connected:
             self._disconnect_device()
         else:
+            print("Showing connection dialog...")
             self._show_connection_dialog()
 
     async def _disconnect_async(self):
         """Async disconnect handler"""
         if hasattr(self, 'disconnect_command'):
             self.stop_heartbeat()  # Stop heartbeat monitoring
-            await self.disconnect_command()
-            
+            try:
+                await self.disconnect_command()
+            finally:
+                # Reset connection state and UI
+                self.is_connected = False
+                self.device_button.configure(
+                    text="Add device",
+                    state="normal",
+                    fg_color=self.config.BUTTON_COLOR,
+                    hover_color=self.config.BUTTON_HOVER_COLOR
+                )
+                # Reset connection dialog reference
+                self.connection_dialog = None
+
     def _disconnect_device(self):
         """Handle device disconnection"""
+        # Update UI immediately
+        self.device_button.configure(text="Disconnecting...", state="disabled")
+        self.show_log_button(False)  # Hide log button immediately
+        self.clear_displays()  # Clear all displays immediately
+        self.is_connected = False  # Update connection state immediately
+        
+        # Run disconnect in background
         if self.loop:
             asyncio.run_coroutine_threadsafe(self._disconnect_async(), self.loop)
 
     def _show_connection_dialog(self):
         """Show the connection dialog"""
-        self.connection_dialog = ConnectionDialog(
-            self, 
-            self.loop,
-            BleakScanner,
-            self._handle_connection
-        )
+        if not self.loop:
+            print("Error: No event loop available")
+            return
+            
+        try:
+            # Clean up any existing dialog
+            if self.connection_dialog:
+                try:
+                    self.connection_dialog.destroy()
+                except:
+                    pass
+            
+            # Create and show dialog
+            self.connection_dialog = ConnectionDialog(
+                self.winfo_toplevel(),  # Use top-level window as parent
+                self.loop,
+                BleakScanner,
+                self._handle_connection
+            )
+            
+            # Make dialog modal
+            self.connection_dialog.transient(self.winfo_toplevel())
+            self.connection_dialog.grab_set()
+            self.connection_dialog.focus_set()
+            
+        except Exception as e:
+            print(f"Error showing connection dialog: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _handle_connection(self, device_info):
         """Handle device connection callback"""
@@ -264,7 +330,9 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             async def connect_wrapper():
                 await self.connect_command(device_info)
             asyncio.run_coroutine_threadsafe(connect_wrapper(), self.loop)
+    # endregion
 
+    # region Logging 
     def set_imu_presenters(self, imu1_presenter, imu2_presenter):
         """Set IMU presenters for logging"""
         self.imu1_presenter = imu1_presenter
@@ -346,14 +414,9 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         """Log IMU and Euler data to CSV files"""
         if self.imu_logger and self.imu_logger.is_logging:
             self.imu_logger.log_imu_data(imu_number, imu_data, euler_data)
+    # endregion
 
-    def show_log_button(self, show: bool):
-        """Show or hide the log button"""
-        if show:
-            self.log_button.grid()
-        else:
-            self.log_button.grid_remove()
-
+    # region Resource 
     def show_connection_status(self, result, device_info=None, message=""):
         """Show connection status"""
         # Update the UI
@@ -380,3 +443,29 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
     async def update_charging(self, state):
         """Update charging state display"""
         self.update_value("charging", state)
+
+    def destroy(self):
+        """Clean up resources before destroying widget"""
+        # Clean up connection dialog
+        if self.connection_dialog:
+            try:
+                self.connection_dialog.destroy()
+            except:
+                pass
+            self.connection_dialog = None
+            
+        # Stop heartbeat monitoring
+        if self._heartbeat_task:
+            self._heartbeat_task.cancel()
+            self._heartbeat_task = None
+            
+        # Clean up logging
+        if self.imu_logger:
+            self._stop_logging()
+            
+        # Mark as destroyed
+        self._destroyed = True
+        
+        # Call parent destroy
+        super().destroy()
+    # endregion
