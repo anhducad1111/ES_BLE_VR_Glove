@@ -8,6 +8,23 @@ class ConnectionPresenter:
         self.service = ble_service
         self.loop = loop
         
+        # Setup heartbeat handler
+        self.view.set_heartbeat_handler(self._check_connection)
+        
+    async def _check_connection(self):
+        """Periodic check of connection status using device name read"""
+        while self.service.is_connected():
+            try:
+                name = await self.service.read_device_name()
+                if not name:
+                    self.view.show_connection_lost()
+                else:
+                    self.view.hide_reconnect_ui()
+            except Exception as e:
+                print(f"Connection check failed: {e}")
+                self.view.show_connection_lost()
+            await asyncio.sleep(3)  # Check every 3 seconds
+        
     async def scan_for_devices(self):
         """Scan for nearby BLE devices"""
         self.view.show_scanning()
@@ -24,6 +41,10 @@ class ConnectionPresenter:
             # Start device services after successful connection
             if hasattr(self.service, 'start_services'):
                 result = await self.service.start_services()
+                
+            if result:
+                # Start heartbeat monitoring after successful connection
+                self.view.start_heartbeat()
             
             message = f"Connected to {device_info.name}"
             self.view.show_connection_status(result, device_info, message)
@@ -34,8 +55,10 @@ class ConnectionPresenter:
         
     async def disconnect(self):
         """Disconnect from current device"""
-        if hasattr(self.service, 'stop_battery_notify'):
-            await self.service.stop_battery_notify()
+        # Stop heartbeat monitoring before disconnecting
+        self.view.stop_heartbeat()
+        
+        # Disconnect from device
         result = await self.service.disconnect()
         self.view.show_connection_status(False, None, "Disconnected")
         return result

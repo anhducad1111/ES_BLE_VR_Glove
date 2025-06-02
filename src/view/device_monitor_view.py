@@ -10,6 +10,7 @@ from src.model.imu_logger import IMULogger
 import os
 import datetime
 import time
+import asyncio
 
 class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
     """View class for monitoring device information"""
@@ -23,57 +24,110 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         self.value_labels = {}
         self.is_connected = False
         self.connection_dialog = None
-        self.loop = None  # Will be set by presenter
-        self.log_button = None  # Will be created in _create_layout
+        self.loop = None  
+        self.log_button = None  
         self.imu1_presenter = None
         self.imu2_presenter = None
         self.selected_folder = None
         self.imu_logger = None
-        self.last_battery_notification = None
         self.reconnect_button = None
-        self.notification_check_timer = None
-        self.current_device_address = None  # Store address for reconnection
+        self.current_device_address = None  
+        self._heartbeat_handler = None
+        self._heartbeat_task = None
         
         self._create_layout()
-        # Initially hide log button
-        self.show_log_button(False)
+        self.show_log_button(False)  # Initially hide log button
 
-    async def update_battery(self, level):
-        """Update battery level"""
-        self.update_value("battery", f"{level}%")
+    # ConnectionViewInterface implementation
+    def set_heartbeat_handler(self, handler):
+        """Set handler for heartbeat monitoring"""
+        self._heartbeat_handler = handler
 
-    async def update_charging(self, state):
-        """Update charging state"""
-        # Update last notification time
-        self.last_battery_notification = time.time()
-        # Start timer if not already running
-        if not self.notification_check_timer:
-            self.notification_check_timer = self.after(3000, self._check_notification_timeout)
-        self.update_value("charging", state)
+    def start_heartbeat(self):
+        """Start heartbeat monitoring"""
+        if self._heartbeat_handler:
+            self._heartbeat_task = asyncio.create_task(self._heartbeat_handler())
 
-    def _check_notification_timeout(self):
-        """Check if battery notification timeout occurred"""
-        if self.is_connected and self.last_battery_notification:
-            current_time = time.time()
-            if current_time - self.last_battery_notification > 3:
-                # Show reconnect UI
-                self.device_button.configure(fg_color="red")
-                self.reconnect_button.grid()
-            # Schedule next check
-            self.notification_check_timer = self.after(3000, self._check_notification_timeout)
+    def stop_heartbeat(self):
+        """Stop heartbeat monitoring"""
+        if self._heartbeat_task:
+            self._heartbeat_task.cancel()
+            self._heartbeat_task = None
+            
+    def show_connection_lost(self):
+        """Show UI elements for lost connection"""
+        self.device_button.configure(fg_color="red")
+        self.reconnect_button.grid()
 
-    def _handle_reconnect(self):
-        """Handle reconnect button click"""
-        if hasattr(self, 'connect_command') and self.current_device_address:
-            # Get info for last connected device
-            current_device = {
-                'name': self.value_labels['name'].cget('text'),
-                'address': self.current_device_address,
-                'rssi': 0  # RSSI not critical for reconnect
-            }
-            # Reuse existing connect flow
-            self.connect_command(current_device)
+    def hide_reconnect_ui(self):
+        """Hide reconnect UI elements"""
+        self.device_button.configure(fg_color=self.config.BUTTON_COLOR)
+        self.reconnect_button.grid_remove()
 
+    def update_connection_status(self, connected, device_info=None, message=""):
+        """Update connection status display"""
+        self.is_connected = connected
+        
+        # Stop heartbeat monitoring if disconnecting
+        if not connected:
+            self.stop_heartbeat()
+        
+        if connected:
+            # Store device address for reconnection
+            if device_info and hasattr(device_info, 'address'):
+                self.current_device_address = device_info.address
+
+            self.show_log_button(True)  # Show log button when connected
+            self.log_button.configure(text="Log")  # Reset log button text
+            self.selected_folder = None  # Reset folder selection
+            
+            # Update button state
+            self.device_button.configure(
+                text="Disconnect",
+                fg_color="darkred",
+                hover_color="#8B0000"
+            )
+            
+            # Update device info
+            self.update_value("name", device_info.name if device_info else "--")
+            self.update_value("status", "Connected")
+            self.update_value("battery", "--")
+            self.update_value("charging", "--")
+
+            self.update_value("firmware", device_info.firmware if device_info else "--")
+            self.update_value("model", device_info.model if device_info else "--")
+            self.update_value("manufacturer", device_info.manufacturer if device_info else "--")
+            self.update_value("hardware", device_info.hardware if device_info else "--")
+
+            # Hide reconnect UI
+            self.hide_reconnect_ui()
+            
+        else:
+            # Stop logging if active
+            if self.imu_logger:
+                self._stop_logging()
+            
+            # Reset folder selection
+            self.selected_folder = None
+
+            # Reset button state
+            self.device_button.configure(
+                text="Add device",
+                fg_color=self.config.BUTTON_COLOR,
+                hover_color=self.config.BUTTON_HOVER_COLOR
+            )
+            
+            # Reset all fields
+            for field_id in self.value_labels:
+                self.update_value(field_id, "--")
+            self.show_log_button(False)  # Hide log button when disconnected
+
+    def clear_displays(self):
+        """Clear all displays"""
+        for field_id in self.value_labels:
+            self.update_value(field_id, "--")
+
+    # View implementation
     def _create_layout(self):
         """Create the main layout of the view"""
         self._create_info_panel()
@@ -145,7 +199,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             command=self._on_log
         )
         self.log_button.grid(row=2, column=1, columnspan=2, padx=12, pady=(12, 0))
-        
+
     def _create_info_fields(self):
         """Create the information fields grid"""
         fields = [
@@ -204,11 +258,16 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         else:
             self._show_connection_dialog()
 
+    async def _disconnect_async(self):
+        """Async disconnect handler"""
+        if hasattr(self, 'disconnect_command'):
+            self.stop_heartbeat()  # Stop heartbeat monitoring
+            await self.disconnect_command()
+            
     def _disconnect_device(self):
         """Handle device disconnection"""
-        # Reset will be handled by show_connection_status
-        if hasattr(self, 'disconnect_command'):
-            self.disconnect_command()
+        if self.loop:
+            asyncio.run_coroutine_threadsafe(self._disconnect_async(), self.loop)
 
     def _show_connection_dialog(self):
         """Show the connection dialog"""
@@ -221,8 +280,23 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
 
     def _handle_connection(self, device_info):
         """Handle device connection callback"""
-        if hasattr(self, 'connect_command'):  
-            self.connect_command(device_info)
+        if hasattr(self, 'connect_command'):
+            asyncio.run_coroutine_threadsafe(self.connect_command(device_info), self.loop)
+
+    async def _handle_reconnect_async(self):
+        """Handle reconnect button click"""
+        if self.current_device_address and hasattr(self, 'connect_command'):
+            current_device = {
+                'name': self.value_labels['name'].cget('text'),
+                'address': self.current_device_address,
+                'rssi': 0
+            }
+            await self.connect_command(current_device)
+            
+    def _handle_reconnect(self):
+        """Button click handler for reconnect"""
+        if self.loop:
+            asyncio.run_coroutine_threadsafe(self._handle_reconnect_async(), self.loop)
 
     def set_imu_presenters(self, imu1_presenter, imu2_presenter):
         """Set IMU presenters for logging"""
@@ -313,67 +387,9 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         else:
             self.log_button.grid_remove()
 
-    def update_connection_status(self, connected, device_info=None, message=""):
-        """Update connection status display (required by ConnectionViewInterface)"""
-        self.is_connected = connected
-        
-        # Reset notification tracking
-        self.last_battery_notification = None
-        if self.notification_check_timer:
-            self.after_cancel(self.notification_check_timer)
-            self.notification_check_timer = None
-        self.reconnect_button.grid_remove()
-        
-        if connected:
-            # Store device address for reconnection
-            if device_info and hasattr(device_info, 'address'):
-                self.current_device_address = device_info.address
-
-            self.show_log_button(True)  # Show log button when connected
-            self.log_button.configure(text="Log")  # Reset log button text
-            self.selected_folder = None  # Reset folder selection
-            
-            # Update button state
-            self.device_button.configure(
-                text="Disconnect",
-                fg_color="darkred",
-                hover_color="#8B0000"
-            )
-            
-            # Update device info
-            self.update_value("name", device_info.name if device_info else "--")
-            self.update_value("status", "Connected")
-            self.update_value("battery", "--")
-            self.update_value("charging", "--")
-
-            self.update_value("firmware", device_info.firmware if device_info else "--")
-            self.update_value("model", device_info.model if device_info else "--")
-            self.update_value("manufacturer", device_info.manufacturer if device_info else "--")
-            self.update_value("hardware", device_info.hardware if device_info else "--")
-            
-        else:
-            # Stop logging if active
-            if self.imu_logger:
-                self._stop_logging()
-            
-            # Reset folder selection
-            self.selected_folder = None
-
-            # Reset button state
-            self.device_button.configure(
-                text="Add device",
-                fg_color=self.config.BUTTON_COLOR,
-                hover_color=self.config.BUTTON_HOVER_COLOR
-            )
-            
-            # Reset all fields
-            for field_id in self.value_labels:
-                self.update_value(field_id, "--")
-            self.show_log_button(False)  # Hide log button when disconnected
-
     def show_connection_status(self, result, device_info=None, message=""):
-        """Show connection status (required by ConnectionPresenter)"""
-        # First update the UI
+        """Show connection status"""
+        # Update the UI
         self.update_connection_status(result, device_info, message)
         
         # Only update status dialog during connection attempts
@@ -389,9 +405,11 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         """Set connection command handlers"""
         self.connect_command = connect_command
         self.disconnect_command = disconnect_command
-        
-    def clear_displays(self):
-        """Clear all displays (required by ConnectionViewInterface)"""
-        # Reset all fields to --
-        for field_id in self.value_labels:
-            self.update_value(field_id, "--")
+
+    async def update_battery(self, level):
+        """Update battery level display"""
+        self.update_value("battery", f"{level}%")
+
+    async def update_charging(self, state):
+        """Update charging state display"""
+        self.update_value("charging", state)
