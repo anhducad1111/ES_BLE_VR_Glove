@@ -132,3 +132,9 @@ class SensorView(ctk.CTkFrame):
         """Enable/disable buttons"""
         state = "normal" if enabled else "disabled"
         self.button_config.configure(state=state)
+        
+    async def clear_values(self):
+        """Clear all sensor values"""
+        for sensor_id in self.flex_entries:
+            self.flex_entries[sensor_id].set_value(0)
+        self.force_entry.set_value(0)

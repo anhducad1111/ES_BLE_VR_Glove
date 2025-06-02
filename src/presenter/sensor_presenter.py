@@ -64,14 +64,3 @@ class SensorPresenter:
             # Update view with new value
             self.view.update_force_sensor(force_data.value)
 
-    def clear_values(self):
-        """Clear current sensor values"""
-        self._current_flex_data = None
-        self._current_force_data = None
-        
-        # Clear flex sensor values
-        for i in range(1, 6):
-            self.view.update_flex_sensor(i, 0.0)
-            
-        # Clear force sensor value
-        self.view.update_force_sensor(0.0)

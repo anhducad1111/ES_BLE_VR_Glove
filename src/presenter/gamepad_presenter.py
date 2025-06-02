@@ -65,18 +65,3 @@ class GamepadPresenter:
             # Update view with new button states
             for i, state in enumerate(buttons_data.states):
                 self.view.update_button_state(i, bool(state))
-
-    def clear_values(self):
-        """Clear current gamepad values"""
-        self._current_joystick_data = None
-        self._current_buttons_data = None
-        
-        # Reset joystick position
-        self.view.update_xy_values(0, 0)
-        
-        # Reset button states
-        for i in range(4):
-            self.view.update_button_state(i, False)
-        
-        # Reset joystick button state
-        self.view.update_joystick_button_state(False)

@@ -281,7 +281,9 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
     def _handle_connection(self, device_info):
         """Handle device connection callback"""
         if hasattr(self, 'connect_command'):
-            asyncio.run_coroutine_threadsafe(self.connect_command(device_info), self.loop)
+            async def connect_wrapper():
+                await self.connect_command(device_info)
+            asyncio.run_coroutine_threadsafe(connect_wrapper(), self.loop)
 
     async def _handle_reconnect_async(self):
         """Handle reconnect button click"""
