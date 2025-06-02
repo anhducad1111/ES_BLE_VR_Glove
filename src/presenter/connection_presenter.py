@@ -1,5 +1,5 @@
 import asyncio
-
+from src.model.device_manager import DeviceManager
 class ConnectionPresenter:
     """Presenter for handling device connections"""
     
@@ -67,26 +67,30 @@ class ConnectionPresenter:
         self.view.show_devices(devices)
         
     async def _start_delayed_services(self, device_info, message):
-        """Start services and update views after connection delay"""
-        # 1. Start device services
-        if hasattr(self.service, 'start_services'):
-            result = await self.service.start_services()
-            if not result:
-                message = "Service initialization failed"
-                if hasattr(self.view, 'connection_dialog') and self.view.connection_dialog:
-                    self.view.connection_dialog.connection_success = False
-                    self.view.connection_dialog.status_dialog.show_failed()
-                await self.disconnect()
-                return False
+        """Start services and update views after OK is clicked"""
+        
+        device_manager = DeviceManager()
+        result = await device_manager.start_device_services()
+        
+        if not result:
+            message = "Service initialization failed"
+            await self.disconnect()
+            return False
 
-            # 2. Update main view after services start
-            self.view.update_connection_status(True, device_info, message)
-            self.view.start_heartbeat()
+        # 3. Update main view only after services start
+        self.view.update_connection_status(True, device_info, message)
+        self.view.start_heartbeat()
 
-            # 3. Start battery notifications last
-            await self.service.start_battery_notifications(device_info)
+        # 4. Start battery notifications last
+        await self.service.start_battery_notifications(device_info)
 
         return True
+
+    def _on_ok_clicked(self, device_info, message):
+        """Handle OK button click in connection dialog"""
+        # Start services in background
+        if self.loop:
+            self.loop.create_task(self._start_delayed_services(device_info, message))
 
     async def connect_to_device(self, device_info):
         """Connect to selected device with delayed main view updates"""
@@ -105,12 +109,12 @@ class ConnectionPresenter:
         if hasattr(self.view, 'connection_dialog') and self.view.connection_dialog:
             self.view.connection_dialog.connection_success = True
             self.view.connection_dialog.status_dialog.show_connected(device_info)
+            # Set callback for OK button
+            self.view.connection_dialog.status_dialog.set_ok_callback(
+                lambda: self._on_ok_clicked(device_info, message)
+            )
 
-        # 3. Delay before starting services and updating main view
-        await asyncio.sleep(5)  # 5 second delay
-
-        # 4. Start delayed services and updates
-        return await self._start_delayed_services(device_info, message)
+        return True
 
         
     async def disconnect(self):
