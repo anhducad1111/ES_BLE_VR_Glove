@@ -61,10 +61,6 @@ class ConnectionViewInterface(ABC):
         """Show UI elements for lost connection"""
         pass
         
-    @abstractmethod
-    def hide_reconnect_ui(self):
-        """Hide reconnect UI elements"""
-        pass
 
 class TimestampViewInterface(ABC):
     """Interface for timestamp display"""
