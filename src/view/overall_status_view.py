@@ -116,6 +116,6 @@ class OverallStatusView(ctk.CTkFrame):
                 text_color=self.config.BUTTON_COLOR if is_running else "red"
             )
             
-    async def clear_values(self):
+    def clear_values(self):
         """Clear all status indicators"""
         self.update_status(False, False, False)

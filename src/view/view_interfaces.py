@@ -37,8 +37,8 @@ class ConnectionViewInterface(ABC):
         pass
     
     @abstractmethod
-    def clear_displays(self):
-        """Clear all displays"""
+    def clear_values(self):
+        """Clear all values"""
         pass
         
     @abstractmethod

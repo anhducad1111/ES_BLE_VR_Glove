@@ -115,7 +115,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             )
             
             # Reset all fields
-            self.clear_displays()
+            self.clear_values()
             self.show_log_button(False)  # Hide log button when disconnected
     # endregion
 
@@ -241,8 +241,8 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         else:
             self.log_button.grid_remove()
 
-    def clear_displays(self):
-        """Clear all displays"""
+    def clear_values(self):
+        """Clear all values"""
         fields_to_clear = [
             "name", "status", "battery", "charging",
             "firmware", "model", "manufacturer", "hardware"
@@ -250,6 +250,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         for field_id in fields_to_clear:
             if field_id in self.value_labels:
                 self.update_value(field_id, "--")
+
     # endregion
 
     # region Connection 
@@ -285,7 +286,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         # Update UI immediately
         self.device_button.configure(text="Disconnecting...", state="disabled")
         self.show_log_button(False)  # Hide log button immediately
-        self.clear_displays()  # Clear all displays immediately
+        self.clear_values()  # Clear all values immediately
         self.is_connected = False  # Update connection state immediately
         
         # Run disconnect in background
@@ -436,13 +437,15 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         self.connect_command = connect_command
         self.disconnect_command = disconnect_command
 
-    async def update_battery(self, level):
+    def update_battery(self, level):
         """Update battery level display"""
-        self.update_value("battery", f"{level}%")
+        # Use after to update UI from any thread
+        self.after(0, lambda: self.update_value("battery", f"{level}%"))
 
-    async def update_charging(self, state):
+    def update_charging(self, state):
         """Update charging state display"""
-        self.update_value("charging", state)
+        # Use after to update UI from any thread
+        self.after(0, lambda: self.update_value("charging", state))
 
     def destroy(self):
         """Clean up resources before destroying widget"""
