@@ -30,6 +30,11 @@ class ConnectionPresenter:
 
                     print("\nConnection lost, attempting auto-reconnection...")
                     profile.update_connection_status("Connection Lost")
+                    
+                    # Stop logging if active before showing connection lost
+                    if hasattr(self.view, '_stop_logging'):
+                        self.view._stop_logging()
+                        
                     self.view.show_connection_lost()
 
                     # Stop services before attempting reconnection
@@ -129,6 +134,10 @@ class ConnectionPresenter:
         try:
             # Stop heartbeat monitoring before disconnecting
             self.view.stop_heartbeat()
+            
+            # Stop logging if active before disconnecting
+            if hasattr(self.view, '_stop_logging'):
+                self.view._stop_logging()
 
             # Get profile before disconnecting
             profile = self.get_connected_device()

@@ -267,6 +267,11 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         """Async disconnect handler"""
         if hasattr(self, 'disconnect_command'):
             self.stop_heartbeat()  # Stop heartbeat monitoring
+            
+            # Stop logging if active before disconnecting
+            if self.imu_logger and self.imu_logger.is_logging:
+                self._stop_logging()
+                
             try:
                 await self.disconnect_command()
             finally:
@@ -283,6 +288,10 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
 
     def _disconnect_device(self):
         """Handle device disconnection"""
+        # Stop logging if active
+        if self.imu_logger and self.imu_logger.is_logging:
+            self._stop_logging()
+            
         # Update UI immediately
         self.device_button.configure(text="Disconnecting...", state="disabled")
         self.show_log_button(False)  # Hide log button immediately
@@ -404,12 +413,14 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
     def _stop_logging(self):
         """Stop logging IMU data"""
         if self.imu_logger:
-            self.imu_logger.stop_logging()
-            self.imu_logger = None
-            self.imu1_presenter.set_log_dialog(None)
-            self.imu2_presenter.set_log_dialog(None)
-            self.selected_folder = None  # Reset folder selection
-            self.log_button.configure(text="Log", fg_color=self.config.BUTTON_COLOR, hover_color=self.config.BUTTON_HOVER_COLOR)
+            try:
+                self.imu_logger.stop_logging()
+                self.imu1_presenter.set_log_dialog(None)
+                self.imu2_presenter.set_log_dialog(None)
+                self.selected_folder = None  # Reset folder selection
+                self.log_button.configure(text="Log", fg_color=self.config.BUTTON_COLOR, hover_color=self.config.BUTTON_HOVER_COLOR)
+            finally:
+                self.imu_logger = None
 
     def log_imu_data(self, imu_number, imu_data, euler_data):
         """Log IMU and Euler data to CSV files"""
