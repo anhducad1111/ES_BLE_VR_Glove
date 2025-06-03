@@ -52,6 +52,7 @@ class AppConfig:
         self.FONT_FAMILY = "Inter"
         self.FONT_SIZE_HEADER = 16
         self.FONT_SIZE_NORMAL = 12
+        self.FONT_SIZE_LARGE = 20
         
         self.FONT_WEIGHT_NORMAL = "normal"
         self.FONT_WEIGHT_BOLD = "bold"
@@ -60,6 +61,7 @@ class AppConfig:
         self.LABEL_FONT = (self.FONT_FAMILY, self.FONT_SIZE_NORMAL)
         self.VALUE_FONT = (self.FONT_FAMILY + " Bold", self.FONT_SIZE_NORMAL)
         self.TEXT_FONT = (self.FONT_FAMILY, self.FONT_SIZE_NORMAL)
+        self.LARGE_FONT = (self.FONT_FAMILY, self.FONT_SIZE_LARGE)
         self.BUTTON_FONT = (self.FONT_FAMILY, self.FONT_SIZE_NORMAL)
         
         # Component styling

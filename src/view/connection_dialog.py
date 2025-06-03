@@ -282,6 +282,7 @@ class ConnectionDialog(ctk.CTkToplevel):
             fg_color="#0078D4",
             hover_color="#006CBE"
         )
+        self.original_connect_text = "Connect"
         self.connect_btn.pack(side="left")
 
     def _show_device_info(self, device_info):
@@ -313,6 +314,9 @@ class ConnectionDialog(ctk.CTkToplevel):
             return
             
         if self.selected_device:
+            # Disable connect button and update text
+            self.connect_btn.configure(state="disabled", text="Connecting...")
+            
             # Show connecting dialog
             from src.view.connection_status_dialog import ConnectionStatusDialog
             self.status_dialog = ConnectionStatusDialog(self)
@@ -333,7 +337,8 @@ class ConnectionDialog(ctk.CTkToplevel):
                 # If connection was successful, close connection dialog
                 self.destroy()
             else:
-                # If connection failed, just release grab to show connection dialog again
+                # If connection failed, restore connect button and release grab
+                self.connect_btn.configure(state="normal", text=self.original_connect_text)
                 self.status_dialog.grab_release()
                 self.grab_set()
 

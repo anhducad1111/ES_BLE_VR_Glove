@@ -114,17 +114,18 @@ class ConnectionPresenter:
                 self.view.connection_dialog.status_dialog.show_failed()
             return False
 
-        # 2. Show connection success in dialog immediately
+        # 2. Show connection success and start countdown
         message = f"Connected to {profile.name}"
         profile.update_connection_status("Connected")
         
         if hasattr(self.view, 'connection_dialog') and self.view.connection_dialog:
             self.view.connection_dialog.connection_success = True
-            self.view.connection_dialog.status_dialog.show_connected(profile)
-            # Set callback for OK button
+            # Set callback for countdown completion
             self.view.connection_dialog.status_dialog.set_ok_callback(
                 lambda: self._on_ok_clicked(profile, message)
             )
+            # Show connected state and start countdown
+            self.view.connection_dialog.status_dialog.show_connected(profile)
 
         return True
 
