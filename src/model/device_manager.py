@@ -24,7 +24,7 @@ class DeviceManager:
         
     def _verify_required_presenters(self):
         """Verify all required presenters are available"""
-        required = ['overall_status', 'imu1', 'imu2', 'timestamp', 'sensor', 'connection', 'gamepad']
+        required = ['profile', 'overall_status', 'imu1', 'imu2', 'timestamp', 'sensor', 'connection', 'gamepad']
         for name in required:
             if name not in self.presenters:
                 raise KeyError(f"Missing required presenter: {name}")
@@ -67,11 +67,12 @@ class DeviceManager:
 
             # Define services to start
             services = [
-                'overall_status',  # Device monitoring
-                'imu1',           # IMU services
+                'profile',        # Device profile & battery
+                'overall_status', # System status monitoring
+                'imu1',          # IMU services
                 'imu2',
-                'sensor',         # Sensors
-                'gamepad'         # Gamepad
+                'sensor',        # Sensors
+                'gamepad'        # Gamepad
             ]
             
             # Start all services concurrently
@@ -111,48 +112,63 @@ class DeviceManager:
             return False
             
     async def cleanup(self):
-        """Clean up all device services concurrently"""
+        """Clean up all device services"""
+        services = [
+            'profile',        # Device profile & battery
+            'overall_status', # System status monitoring
+            'imu1',          # IMU services
+            'imu2',
+            'sensor',        # Sensors
+            'gamepad'        # Gamepad
+        ]
+        
         try:
-            services = [
-                'overall_status',
-                'imu1',
-                'imu2',
-                'sensor',
-                'gamepad'
-            ]
-
-            # Stop all notifications concurrently
-            await asyncio.gather(
-                *[self.presenters[service].stop_notifications() for service in services],
-                return_exceptions=True
-            )
-
-            # Clear all displays concurrently 
-            view_clearers = [
-                self.presenters['imu1'].view.clear_values(),
-                self.presenters['imu2'].view.clear_values(),
-                self.presenters['sensor'].view.clear_values(),
-                self.presenters['gamepad'].view.clear_values(),
-                self.presenters['overall_status'].view.clear_values()
-            ]
-            await asyncio.gather(*view_clearers, return_exceptions=True)
-
+            # First stop all notifications concurrently
+            stop_tasks = []
+            for service in services:
+                if service in self.presenters:
+                    stop_tasks.append(self.presenters[service].stop_notifications())
+            
+            if stop_tasks:
+                await asyncio.gather(*stop_tasks)
+            
+            # Brief delay for notifications to stop
+            await asyncio.sleep(0.2)
+            
+            # Then clear views (synchronously)
+            for service in services:
+                presenter = self.presenters.get(service)
+                if not presenter:
+                    continue
+                    
+                view = getattr(presenter, 'view', None)
+                if not view:
+                    continue
+                    
+                try:
+                    if hasattr(view, 'clear_values'):
+                        view.clear_values()  
+                except Exception as e:
+                    print(f"Error clearing {service} view: {e}")
+            
         except Exception as e:
             print(f"Error during cleanup: {e}")
 
+
     async def connect(self, device_info):
         """Connect to device only"""
-        from src.model.ble_service import BLEDeviceInfo
-        ble_device = BLEDeviceInfo(
-            address=device_info['address'],
-            name=device_info['name'],
-            rssi=device_info['rssi']
-        )
-        
         try:
+            # Convert dict to profile
+            profile = self.presenters['profile'].create_profile({
+                'address': device_info['address'],
+                'name': device_info['name'],
+                'rssi': device_info['rssi']
+            })
+            
             # Only connect, don't start services
-            return await self.presenters['connection'].connect_to_device(ble_device)
-        except Exception:
+            return await self.presenters['connection'].connect_to_device(profile)
+        except Exception as e:
+            print(f"Error connecting to device: {e}")
             return False
 
     async def start_device_services(self):

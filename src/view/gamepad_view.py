@@ -223,18 +223,15 @@ class GamepadView(ctk.CTkFrame):
             fg_color=self.config.BUTTON_COLOR if is_active else self.config.FRAME_BG
         )
         
-    async def clear_values(self):
+    def clear_values(self):
         """Clear current gamepad values"""
-        self._current_joystick_data = None
-        self._current_buttons_data = None
-        
         # Reset joystick position
-        self.view.update_xy_values(0, 0)
+        self.update_xy_values(0, 0)
         
         # Reset button states
         for i in range(4):
-            self.view.update_button_state(i, False)
+            self.update_button_state(i, False)
         
         # Reset joystick button state
-        self.view.update_joystick_button_state(False)
+        self.update_joystick_button_state(False)
 

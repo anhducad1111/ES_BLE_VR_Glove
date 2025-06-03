@@ -10,6 +10,7 @@ from src.presenter.timestamp_presenter import TimestampPresenter
 from src.presenter.overall_status_presenter import OverallStatusPresenter
 from src.presenter.sensor_presenter import SensorPresenter
 from src.presenter.gamepad_presenter import GamepadPresenter
+from src.presenter.profile_presenter import ProfilePresenter
 class App:
     """Main application class handling BLE device monitoring and IMU data visualization"""
     
@@ -55,6 +56,10 @@ class App:
     def _setup_presenters(self):
         """Initialize all presenters"""
         presenters = {
+            'profile': ProfilePresenter(
+                self.main_view.device_monitor,
+                self.ble_service
+            ),
             'overall_status': OverallStatusPresenter(
                 self.main_view.overall_status_view,
                 self.ble_service

@@ -1,5 +1,6 @@
 import asyncio
 from src.model.device_manager import DeviceManager
+
 class ConnectionPresenter:
     """Presenter for handling device connections"""
     
@@ -21,13 +22,14 @@ class ConnectionPresenter:
                 await asyncio.sleep(3)  # Check every 3 seconds
                 name = await self.service.read_device_name()
                 if not name:
-                    device_info = self.get_connected_device()
-                    if not device_info:
-                        print("No device info available for reconnection")
+                    profile = self.get_connected_device()
+                    if not profile:
+                        print("No device profile available for reconnection")
                         await self.disconnect()
                         break
 
                     print("\nConnection lost, attempting auto-reconnection...")
+                    profile.update_connection_status("Connection Lost")
                     self.view.show_connection_lost()
 
                     # Stop services before attempting reconnection
@@ -38,9 +40,10 @@ class ConnectionPresenter:
                     # Try reconnecting up to MAX_RECONNECT_ATTEMPTS times
                     for attempt in range(MAX_RECONNECT_ATTEMPTS):
                         print(f"\nAuto-reconnection attempt {attempt + 1}/{MAX_RECONNECT_ATTEMPTS}")
+                        profile.update_connection_status(f"Reconnecting (Attempt {attempt + 1})")
                         
                         # Attempt to reconnect
-                        if await self.service.connect(device_info):
+                        if await self.service.connect(profile):
                             # Start device services after reconnection
                             if hasattr(self.service, 'start_services'):
                                 if await self.service.start_services():
@@ -66,7 +69,7 @@ class ConnectionPresenter:
         devices = await self.service.scan_devices()
         self.view.show_devices(devices)
         
-    async def _start_delayed_services(self, device_info, message):
+    async def _start_delayed_services(self, profile, message):
         """Start services and update views after OK is clicked"""
         
         device_manager = DeviceManager()
@@ -74,29 +77,31 @@ class ConnectionPresenter:
         
         if not result:
             message = "Service initialization failed"
+            profile.update_connection_status("Failed")
             await self.disconnect()
             return False
-
-        # 3. Update main view only after services start
-        self.view.update_connection_status(True, device_info, message)
+            
+        self.view.update_connection_status(True, profile, message)
         self.view.start_heartbeat()
-
-        # 4. Start battery notifications last
-        await self.service.start_battery_notifications(device_info)
-
+        
         return True
 
-    def _on_ok_clicked(self, device_info, message):
+    def _on_ok_clicked(self, profile, message):
         """Handle OK button click in connection dialog"""
         # Start services in background
         if self.loop:
-            self.loop.create_task(self._start_delayed_services(device_info, message))
+            profile.update_connection_status("Starting services...")
+            self.loop.create_task(self._start_delayed_services(profile, message))
 
     async def connect_to_device(self, device_info):
         """Connect to selected device with delayed main view updates"""
+        # Create device profile through presenter
+        device_manager = DeviceManager()
+        profile = device_manager.presenters['profile'].create_profile(device_info)
+        profile.update_connection_status("Connecting...")
+        
         # 1. Basic connection only
-        device_info.view = self.view
-        result = await self.service.connect(device_info)
+        result = await self.service.connect(profile)
         if not result:
             message = "Connection failed"
             if hasattr(self.view, 'connection_dialog') and self.view.connection_dialog:
@@ -105,13 +110,15 @@ class ConnectionPresenter:
             return False
 
         # 2. Show connection success in dialog immediately
-        message = f"Connected to {device_info.name}"
+        message = f"Connected to {profile.name}"
+        profile.update_connection_status("Connected")
+        
         if hasattr(self.view, 'connection_dialog') and self.view.connection_dialog:
             self.view.connection_dialog.connection_success = True
-            self.view.connection_dialog.status_dialog.show_connected(device_info)
+            self.view.connection_dialog.status_dialog.show_connected(profile)
             # Set callback for OK button
             self.view.connection_dialog.status_dialog.set_ok_callback(
-                lambda: self._on_ok_clicked(device_info, message)
+                lambda: self._on_ok_clicked(profile, message)
             )
 
         return True
@@ -122,15 +129,22 @@ class ConnectionPresenter:
         try:
             # Stop heartbeat monitoring before disconnecting
             self.view.stop_heartbeat()
-            
-            # Stop battery notifications
-            await self.service.stop_battery_notifications()
 
-            # Clear all displays including battery status
-            self.view.clear_displays()
+            # Get profile before disconnecting
+            profile = self.get_connected_device()
+            if profile:
+                profile.update_connection_status("Disconnecting...")
 
-            # Disconnect from device
+            # Clear all displays
+            self.view.clear_values()
+
+            # Disconnect from device (this will stop all notifications)
             result = await self.service.disconnect()
+
+            # Update profile status after disconnect
+            if profile:
+                profile.update_connection_status("Disconnected")
+
             return result
             
         except Exception as e:
