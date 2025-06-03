@@ -401,9 +401,8 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             if self.imu_logger.start_logging():
                 # Update button
                 self.log_button.configure(text="Stop Log", fg_color="darkred", hover_color="#8B0000")
-                # Connect presenters
-                self.imu1_presenter.set_log_dialog(self)
-                self.imu2_presenter.set_log_dialog(self)
+                # Logging is now handled through observer pattern
+                # No need to connect presenters to log dialog
             else:
                 self.imu_logger = None
                 
@@ -415,17 +414,12 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         if self.imu_logger:
             try:
                 self.imu_logger.stop_logging()
-                self.imu1_presenter.set_log_dialog(None)
-                self.imu2_presenter.set_log_dialog(None)
+                # Observer pattern handles logging automatically
                 self.selected_folder = None  # Reset folder selection
                 self.log_button.configure(text="Log", fg_color=self.config.BUTTON_COLOR, hover_color=self.config.BUTTON_HOVER_COLOR)
             finally:
                 self.imu_logger = None
 
-    def log_imu_data(self, imu_number, imu_data, euler_data):
-        """Log IMU and Euler data to CSV files"""
-        if self.imu_logger and self.imu_logger.is_logging:
-            self.imu_logger.log_imu_data(imu_number, imu_data, euler_data)
     # endregion
 
     # region Resource 

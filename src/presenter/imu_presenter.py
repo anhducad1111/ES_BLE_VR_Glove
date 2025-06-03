@@ -1,6 +1,4 @@
-import asyncio
 from src.model.imu import IMUData, IMUEulerData
-from src.view.imu_config_dialog import IMUConfigDialog
 
 class IMUPresenter:
     """Presenter for IMU data operations"""
@@ -131,7 +129,7 @@ class IMUPresenter:
             return False
             
     def set_log_dialog(self, dialog):
-        """Set the IMU log dialog for data logging"""
+        """Set the IMU log dialog for data logging (deprecated - using observer pattern now)"""
         self.log_dialog = dialog
         if not dialog:
             self.latest_imu_data = None
@@ -157,8 +155,8 @@ class IMUPresenter:
             await self._try_log_data()
             
     async def _try_log_data(self):
-        """Try to log data if both IMU and Euler data are available"""
-        if self.log_dialog and self.latest_imu_data and self.latest_euler_data:
+        """Try to notify observers if both IMU and Euler data are available"""
+        if self.latest_imu_data and self.latest_euler_data:
             # Get UUIDs from service
             imu1_char = self.service.IMU1_CHAR_UUID
             imu1_euler = self.service.IMU1_EULER_UUID
@@ -170,7 +168,10 @@ class IMUPresenter:
                 imu_number = 1
             else:
                 imu_number = 2
-            self.log_dialog.log_imu_data(imu_number, self.latest_imu_data, self.latest_euler_data)
+                
+            # Notify all observers through the observer pattern
+            from src.model.imu import BaseIMUData
+            BaseIMUData.notify_observers(imu_number, self.latest_imu_data, self.latest_euler_data)
 
     async def _update_euler_async(self, euler_data):
         """Update view with Euler angles and calibration status asynchronously"""
