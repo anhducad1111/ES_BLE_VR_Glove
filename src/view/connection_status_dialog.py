@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import asyncio
 from src.config.app_config import AppConfig
 from src.view.button_component import ButtonComponent
 
@@ -11,7 +12,7 @@ class ConnectionStatusDialog(ctk.CTkToplevel):
         self.parent = parent
         self._destroyed = False
         self.config = AppConfig()  # Get singleton instance
-        self.ok_callback = None
+        self.countdown_after_id = None
         
         self._setup_window()
         self._create_layout()
@@ -63,41 +64,47 @@ class ConnectionStatusDialog(ctk.CTkToplevel):
         )
         self.status_label.pack(pady=20)
         
-        # OK button (initially hidden)
-        self.ok_button = ButtonComponent(
-            main_frame,
-            button_text="OK",
-            command=self._on_ok_clicked,
-            width=100
-        )
-        self.ok_button.pack(pady=20)
-        self.ok_button.pack_forget()
+        # Initialize button component but don't use it
+        self.ok_button = None
         
     def show_connecting(self):
         """Show connecting state"""
-        self.status_label.configure(text="Connecting...")
-        self.ok_button.pack_forget()
+        self.status_label.configure(text="Connecting...", font=self.config.LARGE_FONT)
         
-    def show_connected(self, device_info):
-        """Show connected state with device info"""
+    async def _countdown(self, device_info):
+        """Show countdown after connection"""
         info_text = f"Connected to:\n{device_info.name}\nRSSI: {device_info.rssi} dBm"
+        
+        # Show initial connection success
         self.status_label.configure(text=info_text)
-        self.ok_button.pack(pady=20)
+        await asyncio.sleep(1)
+        
+        # Countdown
+        for i in range(3, 0, -1):
+            self.status_label.configure(text=f"{info_text}\n\nStarting in {i}", font=self.config.LARGE_FONT)
+            await asyncio.sleep(1)
+            
+        # Trigger the callback to start application
+        if hasattr(self, 'ok_callback') and self.ok_callback:
+            self.ok_callback()
+            
+        # Close both dialogs
+        self.destroy()  # This will close connection status dialog
+        if hasattr(self.parent, 'destroy'):  # This will close connection dialog
+            self.parent.destroy()
+
+    def show_connected(self, device_info):
+        """Show connected state with device info and start countdown"""
+        # Create async task for countdown
+        asyncio.create_task(self._countdown(device_info))
         
     def show_failed(self):
         """Show connection failed state"""
         self.status_label.configure(text="Connection failed")
-        self.ok_button.pack(pady=20)
         
     def set_ok_callback(self, callback):
-        """Set callback for OK button click"""
+        """Set callback for auto-start after countdown"""
         self.ok_callback = callback
-
-    def _on_ok_clicked(self):
-        """Handle OK button click"""
-        if self.ok_callback:
-            self.ok_callback()
-        self.destroy()
 
     def destroy(self):
         """Override destroy to handle cleanup"""
