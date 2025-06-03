@@ -95,18 +95,15 @@ class BLEDebugService:
             return False
 
     def parse_imu_data(self, data):
-        """Tự động giải mã dữ liệu BLE: ASCII, UUID, số, IMU, ..."""
         if not data:
             return "No data"
 
-        # Nếu tất cả bytes là ký tự in được (ASCII)
         if all(0x20 <= b <= 0x7E for b in data):
             try:
                 return f"ASCII: {data.decode('ascii')}"
             except Exception:
                 pass
 
-        # Nếu là 16 byte: thử parse UUID
         if len(data) == 16:
             import uuid
             try:
@@ -115,13 +112,11 @@ class BLEDebugService:
             except Exception:
                 pass
 
-        # Nếu là 4 byte: thử parse timestamp (little-endian)
         if len(data) == 4:
             import struct
             ts = struct.unpack('<I', data)[0]
             return f"Timestamp (uint32 LE): {ts}"
 
-        # Nếu là 18 byte: thử parse IMU (giữ lại logic cũ)
         if len(data) == 18:
             try:
                 import struct
@@ -143,12 +138,9 @@ class BLEDebugService:
                 return f"2x int32: {v1}, {v2}"
             except Exception:
                 pass
-
-        # Nếu là 1 byte: hiển thị số
         if len(data) == 1:
             return f"Byte value: {data[0]}"
 
-        # Nếu là 2 byte: thử parse int16
         if len(data) == 2:
             import struct
             try:
@@ -166,13 +158,11 @@ class BLEDebugService:
             except Exception:
                 pass
 
-        # Nếu là 13, 15, 20 byte: hiển thị hex và ASCII nếu có thể
         if len(data) in (13, 15, 20):
             ascii_part = ''.join(chr(b) if 0x20 <= b <= 0x7E else '.' for b in data)
             hex_part = ' '.join(f'{b:02x}' for b in data)
             return f"Hex: {hex_part}\nASCII: {ascii_part}"
 
-        # Mặc định: hiển thị hex và ASCII
         ascii_part = ''.join(chr(b) if 0x20 <= b <= 0x7E else '.' for b in data)
         hex_part = ' '.join(f'{b:02x}' for b in data)
         return f"Hex: {hex_part}\nASCII: {ascii_part}"

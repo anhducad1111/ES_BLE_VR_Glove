@@ -13,8 +13,8 @@ class DeviceListHeader(ctk.CTkFrame):
 
     def _setup_layout(self):
         self.pack(fill="x")
-        self.grid_columnconfigure(0, weight=1)     # Name - phần còn lại
-        self.grid_columnconfigure(1, minsize=200)  # Address - cố định
+        self.grid_columnconfigure(0, weight=1)    
+        self.grid_columnconfigure(1, minsize=200)
         self.grid_columnconfigure(2, minsize=120)
 
     def _create_headers(self):
@@ -50,8 +50,8 @@ class ScrollableDeviceFrame(ctk.CTkScrollableFrame):
         row = len(self.rows)
         frame = ctk.CTkFrame(self, fg_color="transparent")
         frame.grid(row=row, column=0, sticky="ew", padx=5, pady=2)
-        frame.grid_columnconfigure(0, weight=1)     # Name - phần còn lại
-        frame.grid_columnconfigure(1, minsize=200)  # Address - cố định
+        frame.grid_columnconfigure(0, weight=1)     
+        frame.grid_columnconfigure(1, minsize=200)  
         frame.grid_columnconfigure(2, minsize=100)
 
         device_info = {"name": name, "address": address, "rssi": rssi}
