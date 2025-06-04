@@ -148,7 +148,7 @@ class IMULogDialog(ctk.CTkToplevel):
         # Set initial path
         self.path_entry.entry.configure(state="normal")
         self.path_entry.entry.delete(0, "end")
-        self.path_entry.entry.insert(0, "C:/ProjectIT/ES_iot/tutorial_python")
+        self.path_entry.entry.insert(0, "C:/ProjectIT/ES_iot/log")
 
 
         # Button container
@@ -206,7 +206,7 @@ class IMULogDialog(ctk.CTkToplevel):
 
     def _on_choose_folder(self):
         """Handle choose folder button click"""
-        folder = filedialog.askdirectory(parent=self, initialdir=r"C:\ProjectIT\ES_iot\tutorial_python")
+        folder = filedialog.askdirectory(parent=self, initialdir=r"C:\ProjectIT\ES_iot\log")
         if folder:
             self.path_entry.entry.configure(state="normal")
             self.path_entry.entry.delete(0, "end")

@@ -4,10 +4,6 @@ from src.config.app_config import AppConfig
 from src.view.connection_dialog import ConnectionDialog
 from src.view.button_component import ButtonComponent
 from src.view.view_interfaces import ConnectionViewInterface
-from src.view.imu_log_dialog import IMULogDialog
-from src.util.imu_log import IMULog
-import os
-import datetime
 import asyncio
 
 class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
@@ -23,7 +19,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         # UI Components
         self.info_frame = None
         self.device_button = None
-        self.log_button = None
         self.value_labels = {}
 
         # Connection State
@@ -38,12 +33,9 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         # Logging State
         self.imu1_presenter = None
         self.imu2_presenter = None
-        self.selected_folder = None
-        self.imu_logger = None
 
         # Initialize UI
         self._create_layout()
-        self.show_log_button(False)
     # endregion
 
     # region Connect itf
@@ -78,10 +70,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             # Store device address for reconnection
             if device_info and hasattr(device_info, 'address'):
                 self.current_device_address = device_info.address
-
-            self.show_log_button(True)  # Show log button when connected
-            self.log_button.configure(text="Log")  # Reset log button text
-            self.selected_folder = None  # Reset folder selection
             
             # Update button state
             self.device_button.configure(
@@ -100,12 +88,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             self.update_value("manufacturer", device_info.manufacturer if device_info else "--")
             self.update_value("hardware", device_info.hardware if device_info else "--")
         else:
-            # Stop logging if active
-            if self.imu_logger:
-                self._stop_logging()
-            
-            # Reset folder selection
-            self.selected_folder = None
 
             # Reset button state
             self.device_button.configure(
@@ -116,7 +98,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             
             # Reset all fields
             self.clear_values()
-            self.show_log_button(False)  # Hide log button when disconnected
     # endregion
 
     # region UI Layout
@@ -174,13 +155,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         )
         self.device_button.grid(row=1, column=1, padx=12)
         
-        self.log_button = ButtonComponent(
-            button_container,
-            "Log",
-            command=self._on_log
-        )
-        self.log_button.grid(row=2, column=1, columnspan=2, padx=12, pady=(12, 0))
-
     def _create_info_fields(self):
         """Create the information fields grid"""
         fields = [
@@ -234,13 +208,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         if field_id in self.value_labels:
             self.value_labels[field_id].configure(text=str(value))
 
-    def show_log_button(self, show: bool):
-        """Show or hide the log button"""
-        if show:
-            self.log_button.grid()
-        else:
-            self.log_button.grid_remove()
-
     def clear_values(self):
         """Clear all values"""
         fields_to_clear = [
@@ -268,9 +235,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         if hasattr(self, 'disconnect_command'):
             self.stop_heartbeat()  # Stop heartbeat monitoring
             
-            # Stop logging if active before disconnecting
-            if self.imu_logger and self.imu_logger.is_logging:
-                self._stop_logging()
                 
             try:
                 await self.disconnect_command()
@@ -288,13 +252,9 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
 
     def _disconnect_device(self):
         """Handle device disconnection"""
-        # Stop logging if active
-        if self.imu_logger and self.imu_logger.is_logging:
-            self._stop_logging()
             
         # Update UI immediately
         self.device_button.configure(text="Disconnecting...", state="disabled")
-        self.show_log_button(False)  # Hide log button immediately
         self.clear_values()  # Clear all values immediately
         self.is_connected = False  # Update connection state immediately
         
@@ -342,78 +302,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             asyncio.run_coroutine_threadsafe(connect_wrapper(), self.loop)
     # endregion
 
-    # region Logging 
-    def set_imu_presenters(self, imu1_presenter, imu2_presenter):
-        """Set IMU presenters for logging"""
-        self.imu1_presenter = imu1_presenter
-        self.imu2_presenter = imu2_presenter
-
-    def _on_log(self):
-        """Handle log button click"""
-        if not self.imu1_presenter or not self.imu2_presenter:
-            return
-
-        # If currently logging, stop logging
-        if self.imu_logger:
-            self._stop_logging()
-            return
-
-        # If folder is selected, start logging
-        if self.selected_folder:
-            self._start_logging()
-            return
-            
-        # Otherwise show folder selection dialog
-        try:
-            def create_dialog():
-                self.log_dialog = IMULogDialog(self.winfo_toplevel())
-                
-                def on_cancel():
-                    self.log_dialog.destroy()
-                    self.log_dialog = None
-                
-                def on_apply():
-                    self.selected_folder = self.log_dialog.get_path()
-                    self.log_button.configure(text="Start Log")
-                    self.log_dialog.destroy()
-                    self.log_dialog = None
-                
-                self.log_dialog.set_cancel_callback(on_cancel)
-                self.log_dialog.set_apply_callback(on_apply)
-            
-            # Use after_idle to create dialog after event loop is free
-            self.after_idle(create_dialog)
-            
-        except Exception as e:
-            pass
-
-    def _start_logging(self):
-        """Start logging IMU data"""
-        try:
-            # Get singleton logger instance
-            self.imu_logger = IMULog.instance()
-            if self.imu_logger.start_logging(self.selected_folder):
-                # Update button
-                self.log_button.configure(text="Stop Log", fg_color="darkred", hover_color="#8B0000")
-            else:
-                self.imu_logger = None
-        except Exception as e:
-            print(f"Error starting logging: {e}")
-            self.imu_logger = None
-
-    def _stop_logging(self):
-        """Stop logging IMU data"""
-        if self.imu_logger:
-            try:
-                self.imu_logger.stop_logging()
-                # Observer pattern handles logging automatically
-                self.selected_folder = None  # Reset folder selection
-                self.log_button.configure(text="Log", fg_color=self.config.BUTTON_COLOR, hover_color=self.config.BUTTON_HOVER_COLOR)
-            finally:
-                self.imu_logger = None
-
-    # endregion
-
     # region Resource 
     def show_connection_status(self, result, device_info=None, message=""):
         """Show connection status"""
@@ -458,10 +346,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         if self._heartbeat_task:
             self._heartbeat_task.cancel()
             self._heartbeat_task = None
-            
-        # Clean up logging
-        if self.imu_logger:
-            self._stop_logging()
             
         # Mark as destroyed
         self._destroyed = True

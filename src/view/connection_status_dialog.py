@@ -1,7 +1,6 @@
 import customtkinter as ctk
 import asyncio
 from src.config.app_config import AppConfig
-from src.view.button_component import ButtonComponent
 
 class ConnectionStatusDialog(ctk.CTkToplevel):
     """Dialog to show connection status"""

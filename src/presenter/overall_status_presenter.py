@@ -27,6 +27,7 @@ class OverallStatusPresenter:
             try:
                 result = await self.esp32_service.start_overall_status_notify(self._handle_status_update)
                 if result:
+                    self.view.set_button_states(True)
                     return True
                 await asyncio.sleep(delay)
             except Exception:
@@ -36,10 +37,12 @@ class OverallStatusPresenter:
 
     async def stop_notifications(self):
         """Stop overall status notifications"""
+        self.view.clear_values()
         if not self.esp32_service:
             return
         await self.esp32_service.stop_overall_status_notify()
 
+        
     async def _handle_status_update(self, sender, status_data):
         """Handle status updates from the BLE service"""
         if status_data and isinstance(status_data, OverallStatus):
