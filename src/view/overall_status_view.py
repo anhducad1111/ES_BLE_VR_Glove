@@ -7,6 +7,12 @@ from src.util.imu_log import IMULog
 class OverallStatusView(ctk.CTkFrame):
     def __init__(self, parent):
         self.config = AppConfig()  # Get singleton instance
+        
+        # Set up log manager callback
+        from src.util.log_manager import LogManager
+        self.log_manager = LogManager.instance()
+        self.log_manager.add_folder_change_callback(self._on_folder_change)
+        
         super().__init__(
             parent,
             fg_color=self.config.PANEL_COLOR,
@@ -187,8 +193,11 @@ class OverallStatusView(ctk.CTkFrame):
                     self.log_dialog = None
                 
                 def on_apply():
-                    self.selected_folder = self.log_dialog.get_path()
-                    self.log_button.configure(text="Start Log IMU")
+                    folder = self.log_dialog.get_path()
+                    # Let LogManager handle folder selection
+                    if self.log_manager.setup_logging_folder(folder):
+                        self.selected_folder = folder
+                        self.log_button.configure(text="Start Log IMU")
                     self.log_dialog.destroy()
                     self.log_dialog = None
                 
@@ -200,6 +209,26 @@ class OverallStatusView(ctk.CTkFrame):
             
         except Exception as e:
             pass
+            
+    def destroy(self):
+        """Clean up resources before destroying widget"""
+        # Remove folder change callback
+        if hasattr(self, 'log_manager'):
+            self.log_manager.remove_folder_change_callback(self._on_folder_change)
+            
+        # Existing cleanup
+        if self.imu_logger:
+            self._stop_logging()
+            
+        super().destroy()
+            
+    def _on_folder_change(self, folder):
+        """Handle folder selection changes from LogManager"""
+        self.selected_folder = folder
+        if folder:
+            self.log_button.configure(text="Start Log IMU")
+        else:
+            self.log_button.configure(text="Log IMU")
 
     def _start_logging(self):
         """Start logging IMU data"""

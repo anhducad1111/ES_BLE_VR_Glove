@@ -9,6 +9,13 @@ class SensorView(ctk.CTkFrame):
         self.config = AppConfig()  # Get singleton instance
         self.service = None  # Will be set by presenter
         self.loop = None  # Will be set by presenter
+        self.selected_folder = None  # For log folder selection
+        
+        # Set up log manager callback
+        from src.util.log_manager import LogManager
+        self.log_manager = LogManager.instance()
+        self.log_manager.add_folder_change_callback(self._on_folder_change)
+        
         super().__init__(
             parent,
             fg_color=self.config.PANEL_COLOR,
@@ -80,10 +87,13 @@ class SensorView(ctk.CTkFrame):
             height=28,
         )
         button_container.grid(row=2, column=0, sticky="es", padx=10, pady=(0, 20))
-        button_container.grid_columnconfigure((0, 1), weight=0)
+        button_container.grid_columnconfigure((0, 1, 2), weight=0)
 
         self.button_config = ButtonComponent(button_container, "Configure", command=self._handle_config_click)
         self.button_config.grid(row=2, column=0, sticky="es", pady=(0, 0), padx=(0, 20))
+
+        self.button_log = ButtonComponent(button_container, "Log Sensors", command=self._handle_log_click)
+        self.button_log.grid(row=2, column=1, sticky="es", pady=(0, 0), padx=(0, 20))
 
     async def _on_config(self):
         """Handle configuration button click"""
@@ -132,9 +142,84 @@ class SensorView(ctk.CTkFrame):
         """Enable/disable buttons"""
         state = "normal" if enabled else "disabled"
         self.button_config.configure(state=state)
+        self.button_log.configure(state=state)
         
     def clear_values(self):
         """Clear all sensor values"""
         for sensor_id in self.flex_entries:
             self.flex_entries[sensor_id].set_value(0)
         self.force_entry.set_value(0)
+        
+    def _on_folder_change(self, folder):
+        """Handle folder selection changes from LogManager"""
+        self.selected_folder = folder
+        if folder:
+            self.button_log.configure(text="Start Log Sensors")
+        else:
+            self.button_log.configure(text="Log Sensors")
+
+    def _handle_log_click(self):
+        """Handle log button click"""
+        if not self.service or not self.loop:
+            return
+
+        # Get singleton logger instance
+        from src.util.sensor_log import SensorLog
+        from src.util.log_manager import LogManager
+        sensor_logger = SensorLog.instance()
+        log_manager = LogManager.instance()
+
+        # If currently logging, stop logging
+        if sensor_logger.is_logging:
+            sensor_logger.stop_logging()
+            if log_manager.get_selected_folder():
+                self.button_log.configure(text="Start Log Sensors")
+            else:
+                self.button_log.configure(text="Log Sensors")
+            self.button_log.configure(fg_color=self.config.BUTTON_COLOR,
+                                    hover_color=self.config.BUTTON_HOVER_COLOR)
+            return
+
+        # If folder is selected, start logging
+        if log_manager.get_selected_folder() or self.selected_folder:
+            folder = log_manager.get_selected_folder() or self.selected_folder
+            if sensor_logger.start_logging(folder):
+                self.selected_folder = folder  # Store folder path for future use
+                self.button_log.configure(text="Stop Log",
+                                        fg_color="darkred",
+                                        hover_color="#8B0000")
+            return
+
+        # Otherwise show folder selection dialog
+        try:
+            from src.view.imu_log_dialog import IMULogDialog
+            def create_dialog():
+                self.log_dialog = IMULogDialog(self.winfo_toplevel())
+                
+                def on_cancel():
+                    self.log_dialog.destroy()
+                    self.log_dialog = None
+                
+                def on_apply():
+                    folder = self.log_dialog.get_path()
+                    if self.log_manager.setup_logging_folder(folder):
+                        self.selected_folder = folder
+                        self.button_log.configure(text="Start Log Sensors")
+                    self.log_dialog.destroy()
+                    self.log_dialog = None
+                
+                self.log_dialog.set_cancel_callback(on_cancel)
+                self.log_dialog.set_apply_callback(on_apply)
+            
+            # Use after_idle to create dialog after event loop is free
+            self.after_idle(create_dialog)
+            
+        except Exception as e:
+            pass
+            
+    def destroy(self):
+        """Clean up resources before destroying widget"""
+        # Remove folder change callback
+        if hasattr(self, 'log_manager'):
+            self.log_manager.remove_folder_change_callback(self._on_folder_change)
+        super().destroy()

@@ -6,6 +6,7 @@ import threading
 import datetime
 from src.model.log_abs import LogABS
 from src.model.profile import DeviceProfile
+from src.util.log_manager import LogManager
 
 class IMULog(LogABS):
     """IMU logger with thread queue processing"""
@@ -30,6 +31,7 @@ class IMULog(LogABS):
         self.row_counts = {}
         self.is_logging = False
         self.stop_threads = False
+        self.log_manager = LogManager.instance()
     
     def write_csv(self, imu_number, imu_data, euler_data):
         """Queue IMU data for writing"""
@@ -149,20 +151,24 @@ class IMULog(LogABS):
         except:
             pass
     
-    def start_logging(self, base_folder):
+    def start_logging(self, base_folder=None):
         """Start logging with new timestamped folder"""
         try:
-            # Create timestamped folder
-            now = datetime.datetime.now()
-            subfolder = now.strftime("%d%m%Y_%H%M%S_vr_glove")
-            self.folder_path = os.path.join(base_folder, subfolder)
-            os.makedirs(self.folder_path, exist_ok=True)
+            # Use existing folder if one is already set up
+            if not base_folder and self.log_manager.get_selected_folder():
+                self.folder_path = self.log_manager.get_logging_folder()
+            else:
+                # Set up new logging folder
+                if not self.log_manager.setup_logging_folder(base_folder):
+                    return False
+                self.folder_path = self.log_manager.get_logging_folder()
             
             # Clean up old resources
             self.stop_logging()
             
             self.is_logging = True
             self.stop_threads = False
+            self.log_manager.register_logger()
             return True
             
         except:
@@ -194,3 +200,5 @@ class IMULog(LogABS):
         self.files.clear()
         self.writers.clear()
         self.row_counts.clear()
+        
+        self.log_manager.unregister_logger()
