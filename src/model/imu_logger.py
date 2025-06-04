@@ -2,7 +2,7 @@ import csv
 import os
 import time
 import asyncio
-from .imu import IMUDataObserver
+from .imu import IMUDataObserver, BaseIMUData, IMUEulerData
 
 class IMULogger(IMUDataObserver):
     """Scalable async queue-based IMU logger that can handle unlimited number of IMUs"""
@@ -23,11 +23,9 @@ class IMULogger(IMUDataObserver):
         self.imu_writers = {}     # {imu_number: csv.writer}
         self.headers_written = {} # {imu_number: bool}
         
-    def start_logging(self):
+    async def start_logging(self):
         """Start logging system - IMUs will be added dynamically as data arrives"""
         try:
-            # Register as observer
-            from .imu import BaseIMUData
             BaseIMUData.add_observer(self)
             
             self.is_logging = True
@@ -35,24 +33,27 @@ class IMULogger(IMUDataObserver):
             
         except Exception as e:
             print(f"Error starting logging: {e}")
-            self.stop_logging()
+            await self.stop_logging()
             return False
     
-    def stop_logging(self):
+    async def stop_logging(self):
         """Stop logging and clean up all resources"""
         self.is_logging = False
         
         # Unregister from observer pattern
         try:
-            from .imu import BaseIMUData
             BaseIMUData.remove_observer(self)
         except:
             pass
         
-        # Cancel all tasks
+        # Cancel all tasks and wait for them to finish
         for imu_number, task in self.imu_tasks.items():
             if task and not task.done():
                 task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
         
         # Close all files
         for imu_number, file_obj in self.imu_files.items():
@@ -82,14 +83,14 @@ class IMULogger(IMUDataObserver):
         }
         
         try:
-            if imu_number in self.imu_files:
-                # Write directly since we're not using queues in sync version
-                self._write_imu_data_sync(imu_number, data_package)
+            if imu_number in self.imu_queues:
+                # Queue data for async processing
+                asyncio.create_task(self.imu_queues[imu_number].put(data_package))
         except Exception as e:
-            print(f"Error processing data for IMU{imu_number}: {e}")
+            print(f"Error queuing data for IMU{imu_number}: {e}")
     
     def _ensure_imu_setup(self, imu_number):
-        """Ensure IMU resources are set up (files, writers)"""
+        """Ensure IMU resources are set up (files, writers, queues, tasks)"""
         if imu_number in self.imu_files:
             return  # Already set up
         
@@ -102,18 +103,43 @@ class IMULogger(IMUDataObserver):
             # Create CSV writer
             writer = csv.writer(file_obj)
             
+            # Create async queue
+            queue = asyncio.Queue()
+            
+            # Create processing task
+            task = asyncio.create_task(self._process_imu_queue(imu_number))
+            
             # Store in dictionaries
             self.imu_files[imu_number] = file_obj
             self.imu_writers[imu_number] = writer
+            self.imu_queues[imu_number] = queue
+            self.imu_tasks[imu_number] = task
             self.headers_written[imu_number] = False
             
-            print(f"Set up logging for IMU{imu_number}")
+            print(f"Set up async logging for IMU{imu_number}")
             
         except Exception as e:
             print(f"Error setting up IMU{imu_number}: {e}")
     
-    def _write_imu_data_sync(self, imu_number, data_package):
-        """Write IMU data to appropriate CSV file (synchronous version)"""
+    async def _process_imu_queue(self, imu_number):
+        """Process data queue for specific IMU"""
+        while self.is_logging:
+            try:
+                if imu_number not in self.imu_queues:
+                    break
+                    
+                data_package = await asyncio.wait_for(
+                    self.imu_queues[imu_number].get(), timeout=0.1
+                )
+                await self._write_imu_data_async(imu_number, data_package)
+                
+            except asyncio.TimeoutError:
+                continue
+            except Exception as e:
+                print(f"Error processing IMU{imu_number} queue: {e}")
+
+    async def _write_imu_data_async(self, imu_number, data_package):
+        """Write IMU data to appropriate CSV file (async version)"""
         try:
             if imu_number not in self.imu_writers:
                 return
@@ -136,8 +162,8 @@ class IMULogger(IMUDataObserver):
             # Get flexible field data from IMU
             imu_fields = imu_data.get_log_fields()
             euler_fields = [
-                euler_data.euler['yaw'], 
-                euler_data.euler['pitch'], 
+                euler_data.euler['yaw'],
+                euler_data.euler['pitch'],
                 euler_data.euler['roll']
             ]
             
