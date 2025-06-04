@@ -398,7 +398,9 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             
             # Create logger
             self.imu_logger = IMULogger(full_path)
-            if self.imu_logger.start_logging():
+            # Use existing event loop instead of asyncio.run()
+            loop = asyncio.get_event_loop()
+            if loop.run_until_complete(self.imu_logger.start_logging()):
                 # Update button
                 self.log_button.configure(text="Stop Log", fg_color="darkred", hover_color="#8B0000")
                 # Logging is now handled through observer pattern
@@ -413,7 +415,9 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         """Stop logging IMU data"""
         if self.imu_logger:
             try:
-                self.imu_logger.stop_logging()
+                # Use existing event loop instead of asyncio.run()
+                loop = asyncio.get_event_loop()
+                loop.run_until_complete(self.imu_logger.stop_logging())
                 # Observer pattern handles logging automatically
                 self.selected_folder = None  # Reset folder selection
                 self.log_button.configure(text="Log", fg_color=self.config.BUTTON_COLOR, hover_color=self.config.BUTTON_HOVER_COLOR)
