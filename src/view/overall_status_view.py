@@ -1,5 +1,8 @@
 import customtkinter as ctk
 from src.config.app_config import AppConfig
+from src.view.button_component import ButtonComponent
+from src.view.imu_log_dialog import IMULogDialog
+from src.util.imu_log import IMULog
 
 class OverallStatusView(ctk.CTkFrame):
     def __init__(self, parent):
@@ -11,6 +14,13 @@ class OverallStatusView(ctk.CTkFrame):
             border_width=self.config.BORDER_WIDTH,
             corner_radius=self.config.CORNER_RADIUS
         )
+        # Initialize logging-related variables
+        self.imu1_presenter = None
+        self.imu2_presenter = None
+        self.selected_folder = None
+        self.imu_logger = None
+        self.log_button = None
+
         # Configure base grid
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -41,7 +51,7 @@ class OverallStatusView(ctk.CTkFrame):
         
         # Configure grid columns
         status_container.grid_columnconfigure((1, 3, 5), weight=1)  # Status columns
-        status_container.grid_columnconfigure((0, 2, 4), weight=0)  # Label columns
+        status_container.grid_columnconfigure((0, 2, 4, 6), weight=0)  # Label columns
 
         # Store status labels for updates
         self.status_labels = {}
@@ -60,6 +70,7 @@ class OverallStatusView(ctk.CTkFrame):
                 key,
                 start_col
             )
+        self._create_log_button(status_container)
 
     def create_status_pair(self, parent, label_text, key, start_col):
         """Create a status indicator pair (label + status)"""
@@ -119,3 +130,103 @@ class OverallStatusView(ctk.CTkFrame):
     def clear_values(self):
         """Clear all status indicators"""
         self.update_status(False, False, False)
+        if self.imu_logger:
+            self._stop_logging()
+        
+        self.log_button.configure(
+            text="Log IMU",
+            fg_color=self.config.BUTTON_COLOR,
+            hover_color=self.config.BUTTON_HOVER_COLOR
+        )
+        self.set_button_states(False)
+
+    def _create_log_button(self, parent):
+        """Create the log button"""
+        self.log_button = ButtonComponent(
+            parent,
+            "Log IMU",
+            command=self._on_log
+        )
+        self.log_button.grid(row=0, column=6, columnspan=2, padx=3 ,sticky="e")
+        self.log_button.configure(state="disabled")
+
+    def show_log_button(self, show: bool):
+        """Show or hide the log button"""
+        if show:
+            self.log_button.grid()
+        else:
+            self.log_button.grid_remove()
+
+    def set_imu_presenters(self, imu1_presenter, imu2_presenter):
+        """Set IMU presenters for logging"""
+        self.imu1_presenter = imu1_presenter
+        self.imu2_presenter = imu2_presenter
+
+    def _on_log(self):
+        """Handle log button click"""
+        if not self.imu1_presenter or not self.imu2_presenter:
+            return
+
+        # If currently logging, stop logging
+        if self.imu_logger:
+            self._stop_logging()
+            return
+
+        # If folder is selected, start logging
+        if self.selected_folder:
+            self._start_logging()
+            return
+            
+        # Otherwise show folder selection dialog
+        try:
+            def create_dialog():
+                self.log_dialog = IMULogDialog(self.winfo_toplevel())
+                
+                def on_cancel():
+                    self.log_dialog.destroy()
+                    self.log_dialog = None
+                
+                def on_apply():
+                    self.selected_folder = self.log_dialog.get_path()
+                    self.log_button.configure(text="Start Log IMU")
+                    self.log_dialog.destroy()
+                    self.log_dialog = None
+                
+                self.log_dialog.set_cancel_callback(on_cancel)
+                self.log_dialog.set_apply_callback(on_apply)
+            
+            # Use after_idle to create dialog after event loop is free
+            self.after_idle(create_dialog)
+            
+        except Exception as e:
+            pass
+
+    def _start_logging(self):
+        """Start logging IMU data"""
+        try:
+            # Get singleton logger instance
+            self.imu_logger = IMULog.instance()
+            if self.imu_logger.start_logging(self.selected_folder):
+                # Update button
+                self.log_button.configure(text="Stop Log IMU", fg_color="darkred", hover_color="#8B0000")
+            else:
+                self.imu_logger = None
+        except Exception as e:
+            print(f"Error starting logging: {e}")
+            self.imu_logger = None
+
+    def _stop_logging(self):
+        """Stop logging IMU data"""
+        if self.imu_logger:
+            try:
+                self.imu_logger.stop_logging()
+                # Observer pattern handles logging automatically
+                self.selected_folder = None  # Reset folder selection
+                self.log_button.configure(text="Log", fg_color=self.config.BUTTON_COLOR, hover_color=self.config.BUTTON_HOVER_COLOR)
+            finally:
+                self.imu_logger = None
+
+    def set_button_states(self, enabled):
+        """Enable/disable buttons"""
+        state = "normal" if enabled else "disabled"
+        self.log_button.configure(state=state)

@@ -103,9 +103,9 @@ class App:
         self.main_view.footer.on_timestamp_click = lambda: self.loop.create_task(
             self._handle_timestamp_sync()
         )
-        
-        # Connect IMU presenters to device monitor for logging
-        self.main_view.device_monitor.set_imu_presenters(
+
+        # Connect IMU presenters to overall status view for logging
+        self.main_view.overall_status_view.set_imu_presenters(
             presenters['imu1'],
             presenters['imu2']
         )
