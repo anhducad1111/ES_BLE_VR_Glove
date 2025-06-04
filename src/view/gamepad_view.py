@@ -57,7 +57,7 @@ class GamepadView(ctk.CTkFrame):
 
         # Create xy container
         self.create_xy_container()
-        self.update_xy_values(8000, 6000)
+        self.update_xy_values(0000, 0000)
 
         # Separator
         separator = ctk.CTkFrame(
@@ -90,7 +90,7 @@ class GamepadView(ctk.CTkFrame):
         button_container.grid_columnconfigure((1, 3, 5, 7), weight=1)
 
         # Replace the button creation code with this:
-        button_states = [True, False, True, True]  # Example states: TFTF
+        button_states = [False, False, False, False]  # Example states: TFTF
         self.button_frames = []  # Store frame references for later state updates
 
         for i, (name, state) in enumerate(zip(['B1', 'B2', 'B3', 'B4'], button_states)):

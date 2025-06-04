@@ -160,8 +160,6 @@ class IMUPresenter:
             # Get UUIDs from service
             imu1_char = self.service.IMU1_CHAR_UUID
             imu1_euler = self.service.IMU1_EULER_UUID
-            imu2_char = self.service.IMU2_CHAR_UUID
-            imu2_euler = self.service.IMU2_EULER_UUID
 
             # Determine IMU number from characteristic UUID
             if self.char_uuid in [imu1_char, imu1_euler]:
@@ -169,9 +167,11 @@ class IMUPresenter:
             else:
                 imu_number = 2
                 
-            # Notify all observers through the observer pattern
-            from src.model.imu import BaseIMUData
-            BaseIMUData.notify_observers(imu_number, self.latest_imu_data, self.latest_euler_data)
+            # Get logger singleton - will use existing instance if already initialized
+            from src.util.imu_log import IMULog
+            logger = IMULog.instance()
+            if logger and logger.is_logging:
+                logger.write_csv(imu_number, self.latest_imu_data, self.latest_euler_data)
 
     async def _update_euler_async(self, euler_data):
         """Update view with Euler angles and calibration status asynchronously"""

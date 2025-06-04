@@ -82,7 +82,7 @@ class ConnectionStatusDialog(ctk.CTkToplevel):
         # Countdown
         for i in range(3, 0, -1):
             self.status_label.configure(text=f"{info_text}\n\nStarting in {i}", font=self.config.LARGE_FONT)
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
             
         # Trigger the callback to start application
         if hasattr(self, 'ok_callback') and self.ok_callback:

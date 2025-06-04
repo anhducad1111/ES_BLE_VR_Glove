@@ -5,7 +5,7 @@ from src.view.connection_dialog import ConnectionDialog
 from src.view.button_component import ButtonComponent
 from src.view.view_interfaces import ConnectionViewInterface
 from src.view.imu_log_dialog import IMULogDialog
-from src.model.imu_logger import IMULogger
+from src.util.imu_log import IMULog
 import os
 import datetime
 import asyncio
@@ -390,34 +390,22 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
     def _start_logging(self):
         """Start logging IMU data"""
         try:
-            # Create timestamped subfolder
-            now = datetime.datetime.now()
-            subfolder_name = now.strftime("%d%m%Y_%H%M%S_vr_glove")
-            full_path = os.path.join(self.selected_folder, subfolder_name)
-            os.makedirs(full_path, exist_ok=True)
-            
-            # Create logger
-            self.imu_logger = IMULogger(full_path)
-            # Use existing event loop instead of asyncio.run()
-            loop = asyncio.get_event_loop()
-            if loop.run_until_complete(self.imu_logger.start_logging()):
+            # Get singleton logger instance
+            self.imu_logger = IMULog.instance()
+            if self.imu_logger.start_logging(self.selected_folder):
                 # Update button
                 self.log_button.configure(text="Stop Log", fg_color="darkred", hover_color="#8B0000")
-                # Logging is now handled through observer pattern
-                # No need to connect presenters to log dialog
             else:
                 self.imu_logger = None
-                
         except Exception as e:
+            print(f"Error starting logging: {e}")
             self.imu_logger = None
 
     def _stop_logging(self):
         """Stop logging IMU data"""
         if self.imu_logger:
             try:
-                # Use existing event loop instead of asyncio.run()
-                loop = asyncio.get_event_loop()
-                loop.run_until_complete(self.imu_logger.stop_logging())
+                self.imu_logger.stop_logging()
                 # Observer pattern handles logging automatically
                 self.selected_folder = None  # Reset folder selection
                 self.log_button.configure(text="Log", fg_color=self.config.BUTTON_COLOR, hover_color=self.config.BUTTON_HOVER_COLOR)

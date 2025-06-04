@@ -1,12 +1,5 @@
 import struct
 
-class IMUDataObserver:
-    """Observer interface for IMU data streams"""
-    
-    def on_imu_data_received(self, imu_number, imu_data, euler_data):
-        """Called when new IMU data is received"""
-        pass
-
 class IMUEulerData:
     """Model class representing IMU Euler angles data"""
     
@@ -17,17 +10,17 @@ class IMUEulerData:
             'pitch': pitch,
             'roll': roll
         }
-        # Calibration status (stored for future use)
+        # Calibration status
         self.calib_status = calib_status
         # Raw binary data
         self.raw_data = raw_data
-        
+    
     @classmethod
     def from_bytes(cls, data):
         """Create IMUEulerData object from byte array"""
         if not data or len(data) != 13:  # 3 float32 + 1 uint8
             return None
-            
+        
         try:
             # Unpack 3 float32 values for euler angles
             yaw, pitch, roll = struct.unpack('<3f', data[0:12])
@@ -37,55 +30,26 @@ class IMUEulerData:
         except Exception as e:
             print(f"Error parsing IMU Euler data: {e}")
             return None
-            
-    def to_hex_string(self):
-        """Convert raw data to hex string representation"""
-        if not self.raw_data:
-            return ""
-        return ' '.join(f'{b:02x}' for b in self.raw_data)
-        
-    def get_debug_text(self):
-        """Get formatted debug text"""
-        hex_str = self.to_hex_string()
-        debug_text = f"Raw data ({len(self.raw_data)} bytes):\n{hex_str}\n\n"
-        debug_text += f"Parsed values:\n"
-        debug_text += f"Yaw: {self.euler['yaw']}°\n"
-        debug_text += f"Pitch: {self.euler['pitch']}°\n"
-        debug_text += f"Roll: {self.euler['roll']}°\n"
-        debug_text += f"Calibration: {self.calib_status}"
-        return debug_text
+    
+    def to_bytes(self):
+        """Convert to byte array"""
+        try:
+            return struct.pack('<3fB',
+                self.euler['yaw'],
+                self.euler['pitch'],
+                self.euler['roll'],
+                self.calib_status
+            )
+        except Exception as e:
+            print(f"Error packing IMU Euler data: {e}")
+            return None
 
-class BaseIMUData:
-    """Base class for IMU sensor data with configurable fields"""
+class IMUData:
+    """Model class representing IMU sensor data"""
     
-    # Class-level observers for data distribution
-    _observers = []
-    
-    @classmethod
-    def add_observer(cls, observer):
-        """Add an observer to receive IMU data updates"""
-        if observer not in cls._observers:
-            cls._observers.append(observer)
-    
-    @classmethod
-    def remove_observer(cls, observer):
-        """Remove an observer from receiving IMU data updates"""
-        if observer in cls._observers:
-            cls._observers.remove(observer)
-    
-    @classmethod
-    def notify_observers(cls, imu_number, imu_data, euler_data):
-        """Notify all observers of new IMU data"""
-        for observer in cls._observers:
-            try:
-                observer.on_imu_data_received(imu_number, imu_data, euler_data)
-            except Exception as e:
-                print(f"Error notifying observer {observer}: {e}")
-    
-    def __init__(self, accel_x=0, accel_y=0, accel_z=0,
+    def __init__(self, accel_x=0, accel_y=0, accel_z=0, 
                  gyro_x=0, gyro_y=0, gyro_z=0,
                  mag_x=0, mag_y=0, mag_z=0, raw_data=None):
-        """Initialize base IMU data"""
         # Accelerometer data
         self.accel = {
             'x': accel_x,
@@ -110,24 +74,12 @@ class BaseIMUData:
         # Raw binary data
         self.raw_data = raw_data
     
-    def get_log_fields(self):
-        """Get dictionary of fields for logging - override in subclasses"""
-        return {
-            'ax': self.accel['x'], 'ay': self.accel['y'], 'az': self.accel['z'],
-            'gx': self.gyro['x'], 'gy': self.gyro['y'], 'gz': self.gyro['z'],
-            'mx': self.mag['x'], 'my': self.mag['y'], 'mz': self.mag['z']
-        }
-    
-    def get_log_headers(self):
-        """Get list of field headers for CSV - override in subclasses"""
-        return ['ax', 'ay', 'az', 'gx', 'gy', 'gz', 'mx', 'my', 'mz']
-        
     @classmethod
     def from_bytes(cls, data):
         """Create IMUData object from byte array"""
         if not data or len(data) != 18:  # 9 int16 values
             return None
-            
+        
         try:
             values = struct.unpack('<9h', data)
             return cls(
@@ -139,46 +91,15 @@ class BaseIMUData:
         except Exception as e:
             print(f"Error parsing IMU data: {e}")
             return None
-
-class IMU1Data(BaseIMUData):
-    """IMU1 specific data class - can be customized for IMU1 specific logging"""
     
-    def get_log_fields(self):
-        """Override to customize IMU1 logging fields"""
-        return super().get_log_fields()
-    
-    def get_log_headers(self):
-        """Override to customize IMU1 logging headers"""
-        return super().get_log_headers()
-
-class IMU2Data(BaseIMUData):
-    """IMU2 specific data class - can be customized for IMU2 specific logging"""
-    
-    def get_log_fields(self):
-        """Override to customize IMU2 logging fields"""
-        return super().get_log_fields()
-    
-    def get_log_headers(self):
-        """Override to customize IMU2 logging headers"""
-        return super().get_log_headers()
-
-# Maintain backward compatibility
-class IMUData(BaseIMUData):
-    """Legacy IMUData class for backward compatibility"""
-    pass
-            
-    def to_hex_string(self):
-        """Convert raw data to hex string representation"""
-        if not self.raw_data:
-            return ""
-        return ' '.join(f'{b:02x}' for b in self.raw_data)
-        
-    def get_debug_text(self):
-        """Get formatted debug text"""
-        hex_str = self.to_hex_string()
-        debug_text = f"Raw data ({len(self.raw_data)} bytes):\n{hex_str}\n\n"
-        debug_text += f"Parsed values:\n"
-        debug_text += f"Accel: ({self.accel['x']}, {self.accel['y']}, {self.accel['z']})\n"
-        debug_text += f"Gyro: ({self.gyro['x']}, {self.gyro['y']}, {self.gyro['z']})\n"
-        debug_text += f"Mag: ({self.mag['x']}, {self.mag['y']}, {self.mag['z']})"
-        return debug_text
+    def to_bytes(self):
+        """Convert to byte array"""
+        try:
+            return struct.pack('<9h',
+                self.accel['x'], self.accel['y'], self.accel['z'],
+                self.gyro['x'], self.gyro['y'], self.gyro['z'],
+                self.mag['x'], self.mag['y'], self.mag['z']
+            )
+        except Exception as e:
+            print(f"Error packing IMU data: {e}")
+            return None

@@ -18,7 +18,7 @@ class OverallStatusView(ctk.CTkFrame):
         # Create UI Components
         self.create_header()
         self.create_status_container()
-        self.update_status(False, True, False)
+        self.update_status(False, False, False)
 
     def create_header(self):
         """Create the header section"""
