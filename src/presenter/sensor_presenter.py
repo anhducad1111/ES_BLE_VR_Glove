@@ -1,4 +1,5 @@
 from src.model.sensor import FlexSensorData, ForceSensorData
+from src.util.sensor_log import SensorLog
 
 class SensorPresenter:
     """Presenter for handling sensor data"""
@@ -17,6 +18,7 @@ class SensorPresenter:
         self.view.loop = loop  # Set event loop for async operations
         self._current_flex_data = None
         self._current_force_data = None
+        self.sensor_logger = SensorLog.instance()
         
         # Initially disable buttons until connection is established
         self.view.set_button_states(False)
@@ -51,6 +53,10 @@ class SensorPresenter:
             # Update view with new values
             for i, value in enumerate(flex_data.values, 1):
                 self.view.update_flex_sensor(i, value)
+                
+            # Write to log if force data is also available
+            if self._current_force_data:
+                self.sensor_logger.write_csv(flex_data.values, self._current_force_data.value)
 
     async def _handle_force_update(self, sender, force_data):
         """Handle force sensor data updates
@@ -63,4 +69,8 @@ class SensorPresenter:
             self._current_force_data = force_data
             # Update view with new value
             self.view.update_force_sensor(force_data.value)
+            
+            # Write to log if flex data is also available
+            if self._current_flex_data:
+                self.sensor_logger.write_csv(self._current_flex_data.values, force_data.value)
 
