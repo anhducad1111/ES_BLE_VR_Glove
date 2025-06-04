@@ -1,7 +1,18 @@
 class DeviceProfile:
     """Model class representing complete device profile information"""
     
+    _instance = None
+    
+    def __new__(cls, address=None, name="Unknown", rssi=0):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+    
     def __init__(self, address=None, name="Unknown", rssi=0):
+        if self._initialized:
+            return
+        self._initialized = True
         # Basic device info
         self.address = address
         self.name = name 
@@ -18,6 +29,13 @@ class DeviceProfile:
         self.battery_level = 0
         self.charging_state = "Not Charging"
         
+    @classmethod
+    def get_instance(cls):
+        """Get the singleton instance"""
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+            
     @classmethod
     def from_discovered_device(cls, device):
         """Create from discovered BLE device"""
