@@ -36,10 +36,25 @@ class SensorPresenter:
 
     async def stop_notifications(self):
         """Stop sensor notifications"""
-        if self.service:
-            await self.service.stop_flex_sensor_notify()
-            await self.service.stop_force_sensor_notify()
-            self.view.set_button_states(False)
+        try:
+            if self.service:
+                # Stop notifications first to prevent new data
+                await self.service.stop_flex_sensor_notify()
+                await self.service.stop_force_sensor_notify()
+                
+                # Then stop logging if active
+                if self.sensor_logger.is_logging:
+                    self.sensor_logger.stop_logging()
+                    # Reset log button state
+                    self.view.reset_log_button()
+                
+                self.view.set_button_states(False)
+                
+                # Clear current data
+                self._current_flex_data = None
+                self._current_force_data = None
+        except Exception as e:
+            print(f"Error stopping sensor notifications: {e}")
 
     async def _handle_flex_update(self, sender, flex_data):
         """Handle flex sensor data updates

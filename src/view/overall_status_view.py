@@ -1,7 +1,6 @@
 import customtkinter as ctk
 from src.config.app_config import AppConfig
 from src.view.button_component import ButtonComponent
-from src.view.imu_log_dialog import IMULogDialog
 from src.util.imu_log import IMULog
 
 class OverallStatusView(ctk.CTkFrame):
@@ -178,37 +177,10 @@ class OverallStatusView(ctk.CTkFrame):
             self._stop_logging()
             return
 
-        # If folder is selected, start logging
-        if self.selected_folder:
-            self._start_logging()
-            return
-            
-        # Otherwise show folder selection dialog
-        try:
-            def create_dialog():
-                self.log_dialog = IMULogDialog(self.winfo_toplevel())
-                
-                def on_cancel():
-                    self.log_dialog.destroy()
-                    self.log_dialog = None
-                
-                def on_apply():
-                    folder = self.log_dialog.get_path()
-                    # Let LogManager handle folder selection
-                    if self.log_manager.setup_logging_folder(folder):
-                        self.selected_folder = folder
-                        self.log_button.configure(text="Start Log IMU")
-                    self.log_dialog.destroy()
-                    self.log_dialog = None
-                
-                self.log_dialog.set_cancel_callback(on_cancel)
-                self.log_dialog.set_apply_callback(on_apply)
-            
-            # Use after_idle to create dialog after event loop is free
-            self.after_idle(create_dialog)
-            
-        except Exception as e:
-            pass
+        # Start logging using path from LogManager
+        folder = self.log_manager.get_selected_folder()
+        self.selected_folder = folder
+        self._start_logging()
             
     def destroy(self):
         """Clean up resources before destroying widget"""

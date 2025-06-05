@@ -108,45 +108,34 @@ class SensorLog(LogABS):
         except:
             pass
     
-    def start_logging(self, base_folder=None):
+    def start_logging(self, base_folder):
         """Start logging sensor data"""
-        try:
-            # Use existing folder if one is already set up
-            if not base_folder and self.log_manager.get_selected_folder():
-                folder_path = self.log_manager.get_logging_folder()
-            else:
-                # Set up new logging folder
-                if not self.log_manager.setup_logging_folder(base_folder):
-                    return False
-                folder_path = self.log_manager.get_logging_folder()
+        # Create timestamped subfolder
+        now = datetime.datetime.now()
+        subfolder = now.strftime("%d%m%Y_%H%M%S_vr_glove")
+        self.folder_path = os.path.join(base_folder, subfolder)
+        os.makedirs(self.folder_path, exist_ok=True)
+        
+        # Create sensor log file
+        file_path = os.path.join(self.folder_path, 'sensors.csv')
+        self.file = open(file_path, 'w', newline='')
+        self.writer = csv.writer(self.file)
+        
+        # Write header
+        self.setup_header()
+        
+        # Start processing thread
+        self.stop_thread = False
+        self.thread = threading.Thread(
+            target=self._process_queue,
+            daemon=True
+        )
+        self.thread.start()
+        
+        self.is_logging = True
+        self.log_manager.register_logger()
+        return True
             
-            # Create sensor log file
-            file_path = os.path.join(folder_path, 'sensors.csv')
-            self.file = open(file_path, 'w', newline='')
-            self.writer = csv.writer(self.file)
-            
-            # Write header
-            self.setup_header()
-            
-            # Start processing thread
-            self.stop_thread = False
-            self.thread = threading.Thread(
-                target=self._process_queue,
-                daemon=True
-            )
-            self.thread.start()
-            
-            self.is_logging = True
-            self.log_manager.register_logger()
-            return True
-            
-        except:
-            if self.file:
-                self.file.close()
-            self.file = None
-            self.writer = None
-            self.is_logging = False
-            return False
     
     def stop_logging(self):
         """Stop logging and cleanup"""
