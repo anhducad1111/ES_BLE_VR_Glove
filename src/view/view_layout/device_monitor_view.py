@@ -2,9 +2,9 @@ import customtkinter as ctk
 from bleak import BleakScanner
 from PIL import Image
 from src.config.app_config import AppConfig
-from src.view.connection_dialog import ConnectionDialog
-from src.view.button_component import ButtonComponent
-from src.view.coordinate_entry import CoordinateEntry
+from src.view.view_dialog.connection_dialog import ConnectionDialog
+from src.view.view_component.button_component import ButtonComponent
+from src.view.view_component.coordinate_entry import CoordinateEntry
 from src.view.view_interfaces import ConnectionViewInterface
 from src.util.log_manager import LogManager
 import asyncio

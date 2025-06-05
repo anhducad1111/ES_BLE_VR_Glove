@@ -2,9 +2,9 @@ import customtkinter as ctk
 from dataclasses import dataclass
 from typing import Dict, Optional, Any
 from src.config.app_config import AppConfig
-from src.view.coordinate_entry import CoordinateEntry
-from src.view.button_component import ButtonComponent
-from src.view.other_config_dialog import OtherConfigDialog
+from src.view.view_component.coordinate_entry import CoordinateEntry
+from src.view.view_component.button_component import ButtonComponent
+from src.view.view_dialog.other_config_dialog import OtherConfigDialog
 
 @dataclass
 class SensorConfig:

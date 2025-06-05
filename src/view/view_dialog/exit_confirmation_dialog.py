@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from src.config.app_config import AppConfig
-from src.view.button_component import ButtonComponent
+from src.view.view_component.button_component import ButtonComponent
 
 class ExitConfirmationDialog(ctk.CTkToplevel):
     def __init__(self, parent):

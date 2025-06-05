@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from bleak import BleakScanner
 from src.config.app_config import AppConfig
-from src.view.button_component import ButtonComponent
+from src.view.view_component.button_component import ButtonComponent
 import asyncio
 
 class DeviceListHeader(ctk.CTkFrame):
@@ -318,7 +318,7 @@ class ConnectionDialog(ctk.CTkToplevel):
             self.connect_btn.configure(state="disabled", text="Connecting...")
             
             # Show connecting dialog
-            from src.view.connection_status_dialog import ConnectionStatusDialog
+            from src.view.view_dialog.connection_status_dialog import ConnectionStatusDialog
             self.status_dialog = ConnectionStatusDialog(self)
             self.status_dialog.bind('<Destroy>', self._on_status_dialog_closed)
             self.status_dialog.show_connecting()

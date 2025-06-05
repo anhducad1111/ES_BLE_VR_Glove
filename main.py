@@ -150,7 +150,7 @@ class App:
     
     def _on_closing(self):
         """Handle application shutdown"""
-        from src.view.exit_confirmation_dialog import ExitConfirmationDialog
+        from src.view.view_dialog.exit_confirmation_dialog import ExitConfirmationDialog
         dialog = ExitConfirmationDialog(self.window)
         
         async def handle_exit():

@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from src.config.app_config import AppConfig
-from src.view.button_component import ButtonComponent
+from src.view.view_component.button_component import ButtonComponent
 import subprocess
 
 class IMUCalibrationDialog(ctk.CTkToplevel):
