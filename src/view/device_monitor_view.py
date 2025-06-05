@@ -6,8 +6,6 @@ from src.view.connection_dialog import ConnectionDialog
 from src.view.button_component import ButtonComponent
 from src.view.coordinate_entry import CoordinateEntry
 from src.view.view_interfaces import ConnectionViewInterface
-from src.util.imu_log import IMULog
-from src.util.sensor_log import SensorLog
 from src.util.log_manager import LogManager
 import asyncio
 from customtkinter import filedialog
@@ -96,7 +94,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             self.update_value("manufacturer", device_info.manufacturer if device_info else "--")
             self.update_value("hardware", device_info.hardware if device_info else "--")
         else:
-
             # Reset button state
             self.device_button.configure(
                 text="Add device",
@@ -201,16 +198,14 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         )
         self.path_entry.grid(row=0, column=1, sticky="e")
 
-        # Set path from LogManager - Thay đổi thứ tự các bước
-        self.path_entry.entry.delete(0, "end")  # Xóa nội dung cũ
-        self.path_entry.entry.insert(0, self.log_manager.get_selected_folder())  # Thêm đường dẫn mới
+        # Set path from LogManager
+        self.path_entry.entry.delete(0, "end")
+        self.path_entry.entry.insert(0, self.log_manager.get_selected_folder())
         self.path_entry.entry.configure(
-            state="readonly",  # Sau khi đã insert text mới set readonly
+            state="readonly",
             cursor="arrow"
         )
-        
     
-        
     def _create_info_fields(self):
         """Create the information fields grid"""
         fields = [
@@ -273,7 +268,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         for field_id in fields_to_clear:
             if field_id in self.value_labels:
                 self.update_value(field_id, "--")
-
     # endregion
 
     # region Connection 
@@ -290,7 +284,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         """Async disconnect handler"""
         if hasattr(self, 'disconnect_command'):
             self.stop_heartbeat()  # Stop heartbeat monitoring
-            
                 
             try:
                 await self.disconnect_command()
@@ -408,7 +401,9 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         
     def _is_any_logger_active(self):
         """Check if any logger is currently active"""
-        return IMULog.instance().is_logging or SensorLog.instance().is_logging
+        return (self.log_manager.get_imu1_logger().is_logging or
+                self.log_manager.get_imu2_logger().is_logging or 
+                self.log_manager.get_sensor_logger().is_logging)
         
     def set_path_entry_state(self, state):
         """Enable/disable path entry based on logging state"""

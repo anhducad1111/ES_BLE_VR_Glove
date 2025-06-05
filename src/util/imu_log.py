@@ -1,6 +1,5 @@
 import time
 import queue
-import threading
 from src.util.base_log import BaseLog
 
 class IMULog(BaseLog):
@@ -50,32 +49,7 @@ class IMULog(BaseLog):
                 'gx', 'gy', 'gz',
                 'mx', 'my', 'mz',
                 'ex', 'ey', 'ez']
-
-    def start_logging(self, base_folder):
-        """Start logging IMU data"""
-        super().start_logging(base_folder)
-        
-        self.file, self.writer = self._initialize_log_file(f'imu{self.imu_number}.csv')
-        self.setup_header()
-        
-        self.thread = threading.Thread(
-            target=self._process_queue,
-            daemon=True
-        )
-        self.thread.start()
-        return True
-
-    def stop_logging(self):
-        """Stop logging and cleanup"""
-        if self.writer:
-            self.setup_footer()
-        if self.file:
-            self.file.close()
-            
-        self.queue = queue.Queue(maxsize=1000)
-        self.thread = None
-        self.file = None
-        self.writer = None
-        self.row_count = 0
-        
-        super().stop_logging()
+                
+    def _get_filename(self):
+        """Get filename for IMU log file"""
+        return f'imu{self.imu_number}.csv'

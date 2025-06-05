@@ -77,7 +77,7 @@ class LogManager:
         """Get sensor logger instance"""
         if not self.sensor_logger:
             from src.util.sensor_log import SensorLog
-            self.sensor_logger = SensorLog.instance()
+            self.sensor_logger = SensorLog()
         return self.sensor_logger
 
     def start_all_logging(self):

@@ -7,7 +7,7 @@ class OverallStatusView(ctk.CTkFrame):
     def __init__(self, parent):
         self.config = AppConfig()  # Get singleton instance
         
-        # Set up log manager
+        # Set up log manager callback
         self.log_manager = LogManager.instance()
         self.log_manager.add_folder_change_callback(self._on_folder_change)
         
@@ -19,10 +19,9 @@ class OverallStatusView(ctk.CTkFrame):
             corner_radius=self.config.CORNER_RADIUS
         )
         # Initialize variables
-        self.imu1_presenter = None
-        self.imu2_presenter = None
         self.selected_folder = None
         self.log_button = None
+        self.presenter = None
 
         # Configure base grid
         self.grid_columnconfigure(0, weight=1)
@@ -111,13 +110,7 @@ class OverallStatusView(ctk.CTkFrame):
         self.status_labels[key] = status
 
     def update_status(self, fuelgause: bool, imu1: bool, imu2: bool):
-        """Update all status indicators at once
-        
-        Args:
-            fuelgause: Status of fuelgause
-            imu1: Status of IMU1
-            imu2: Status of IMU2
-        """
+        """Update all status indicators at once"""
         status_values = {
             "fuelgause": fuelgause,
             "imu1": imu1,
@@ -162,14 +155,13 @@ class OverallStatusView(ctk.CTkFrame):
         else:
             self.log_button.grid_remove()
 
-    def set_imu_presenters(self, imu1_presenter, imu2_presenter):
-        """Set IMU presenters for logging"""
-        self.imu1_presenter = imu1_presenter
-        self.imu2_presenter = imu2_presenter
+    def set_presenter(self, presenter):
+        """Set presenter reference"""
+        self.presenter = presenter
 
     def _on_log(self):
         """Handle log button click"""
-        if not self.imu1_presenter or not self.imu2_presenter:
+        if not self.presenter:
             return
 
         # If currently logging, stop logging
@@ -205,18 +197,9 @@ class OverallStatusView(ctk.CTkFrame):
     def _start_logging(self):
         """Start logging IMU and Sensor data"""
         try:
-            # Set loggers in presenters
-            self.imu1_presenter.set_logger(self.log_manager.get_imu1_logger())
-            self.imu2_presenter.set_logger(self.log_manager.get_imu2_logger())
-            
-            # Start all logging
-            if self.log_manager.start_all_logging():
+            if self.presenter.start_all_logging():
                 # Update button
                 self.log_button.configure(text="Stop Log IMU", fg_color="darkred", hover_color="#8B0000")
-            else:
-                # Reset presenters if logging fails
-                self.imu1_presenter.set_logger(None)
-                self.imu2_presenter.set_logger(None)
                 
         except Exception as e:
             print(f"Error starting logging: {e}")
@@ -225,10 +208,7 @@ class OverallStatusView(ctk.CTkFrame):
     def _stop_logging(self):
         """Stop logging IMU and Sensor data"""
         try:
-            self.log_manager.stop_all_logging()
-            self.imu1_presenter.set_logger(None)
-            self.imu2_presenter.set_logger(None)
-            
+            self.presenter.stop_all_logging()
             # Reset button
             self.selected_folder = None
             self.log_button.configure(text="Log", fg_color=self.config.BUTTON_COLOR, hover_color=self.config.BUTTON_HOVER_COLOR)
