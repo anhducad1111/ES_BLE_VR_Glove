@@ -172,50 +172,15 @@ class SensorView(ctk.CTkFrame):
         # If currently logging, stop logging
         if sensor_logger.is_logging:
             sensor_logger.stop_logging()
-            if log_manager.get_selected_folder():
-                self.button_log.configure(text="Start Log Sensors")
-            else:
-                self.button_log.configure(text="Log Sensors")
-            self.button_log.configure(fg_color=self.config.BUTTON_COLOR,
-                                    hover_color=self.config.BUTTON_HOVER_COLOR)
+            self.reset_log_button()
             return
 
-        # If folder is selected, start logging
-        if log_manager.get_selected_folder() or self.selected_folder:
-            folder = log_manager.get_selected_folder() or self.selected_folder
-            if sensor_logger.start_logging(folder):
-                self.selected_folder = folder  # Store folder path for future use
-                self.button_log.configure(text="Stop Log",
-                                        fg_color="darkred",
-                                        hover_color="#8B0000")
-            return
-
-        # Otherwise show folder selection dialog
-        try:
-            from src.view.imu_log_dialog import IMULogDialog
-            def create_dialog():
-                self.log_dialog = IMULogDialog(self.winfo_toplevel())
-                
-                def on_cancel():
-                    self.log_dialog.destroy()
-                    self.log_dialog = None
-                
-                def on_apply():
-                    folder = self.log_dialog.get_path()
-                    if self.log_manager.setup_logging_folder(folder):
-                        self.selected_folder = folder
-                        self.button_log.configure(text="Start Log Sensors")
-                    self.log_dialog.destroy()
-                    self.log_dialog = None
-                
-                self.log_dialog.set_cancel_callback(on_cancel)
-                self.log_dialog.set_apply_callback(on_apply)
-            
-            # Use after_idle to create dialog after event loop is free
-            self.after_idle(create_dialog)
-            
-        except Exception as e:
-            pass
+        # Start logging using the path from LogManager
+        folder = log_manager.get_selected_folder()
+        if sensor_logger.start_logging(folder):
+            self.button_log.configure(text="Stop Log",
+                                    fg_color="darkred",
+                                    hover_color="#8B0000")
             
     def destroy(self):
         """Clean up resources before destroying widget"""
@@ -223,3 +188,11 @@ class SensorView(ctk.CTkFrame):
         if hasattr(self, 'log_manager'):
             self.log_manager.remove_folder_change_callback(self._on_folder_change)
         super().destroy()
+        
+    def reset_log_button(self):
+        """Reset log button to default state"""
+        self.button_log.configure(
+            text="Start Log Sensors",
+            fg_color=self.config.BUTTON_COLOR,
+            hover_color=self.config.BUTTON_HOVER_COLOR
+        )

@@ -13,10 +13,11 @@ class LogManager:
         return cls._instance
     
     def __init__(self):
-        self.selected_folder = None
+        self.selected_folder = "C:/ProjectIT/ES_iot/log"  # Default path
         self.folder_path = None
         self.active_loggers = 0
         self._folder_change_callbacks = []
+        self._notify_folder_change()  # Notify about default path
 
     def add_folder_change_callback(self, callback):
         """Add callback to be notified of folder changes"""
@@ -37,20 +38,11 @@ class LogManager:
                 pass
         
     def setup_logging_folder(self, base_folder):
-        """Set up logging folder and return the path"""
-        try:
-            # Create timestamped folder
-            now = datetime.datetime.now()
-            subfolder = now.strftime("%d%m%Y_%H%M%S_vr_glove")
-            self.folder_path = os.path.join(base_folder, subfolder)
-            os.makedirs(self.folder_path, exist_ok=True)
-            self.selected_folder = base_folder
-            self._notify_folder_change()  # Notify observers
-            return True
-        except:
-            self.folder_path = None
-            self.selected_folder = None
-            return False
+        """Set up logging folder path"""
+        # Update selected folder and notify
+        self.selected_folder = base_folder if base_folder else "C:/ProjectIT/ES_iot/log"
+        self._notify_folder_change()
+        return True
     
     def get_logging_folder(self):
         """Get current logging folder path"""
@@ -61,10 +53,9 @@ class LogManager:
         return self.selected_folder
         
     def clear_logging(self):
-        """Clear logging state"""
-        self.selected_folder = None
+        """Reset logging state"""
         self.folder_path = None
-        self._notify_folder_change()  # Notify observers
+        self.active_loggers = 0
         
     def register_logger(self):
         """Register a new active logger"""

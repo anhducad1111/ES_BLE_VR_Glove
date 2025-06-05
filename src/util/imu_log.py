@@ -151,30 +151,21 @@ class IMULog(LogABS):
         except:
             pass
     
-    def start_logging(self, base_folder=None):
+    def start_logging(self, base_folder):
         """Start logging with new timestamped folder"""
-        try:
-            # Use existing folder if one is already set up
-            if not base_folder and self.log_manager.get_selected_folder():
-                self.folder_path = self.log_manager.get_logging_folder()
-            else:
-                # Set up new logging folder
-                if not self.log_manager.setup_logging_folder(base_folder):
-                    return False
-                self.folder_path = self.log_manager.get_logging_folder()
-            
-            # Clean up old resources
-            self.stop_logging()
-            
-            self.is_logging = True
-            self.stop_threads = False
-            self.log_manager.register_logger()
-            return True
-            
-        except:
-            self.folder_path = None
-            self.is_logging = False
-            return False
+        # Use the provided folder to create timestamped subfolder
+        now = datetime.datetime.now()
+        subfolder = now.strftime("%d%m%Y_%H%M%S_vr_glove")
+        self.folder_path = os.path.join(base_folder, subfolder)
+        os.makedirs(self.folder_path, exist_ok=True)
+        
+        # Clean up any previous logging
+        self.stop_logging()
+        
+        self.is_logging = True
+        self.stop_threads = False
+        self.log_manager.register_logger()
+        return True
     
     def stop_logging(self):
         """Stop logging and cleanup"""
