@@ -17,6 +17,11 @@ class IMUPresenter:
         self.log_dialog = None
         self.latest_imu_data = None
         self.latest_euler_data = None
+        self.logger = None
+        
+        # Get IMU number from UUID
+        imu1_char = self.service.IMU1_CHAR_UUID
+        self.is_imu1 = (self.char_uuid == imu1_char)
         
         # Initially disable buttons until connection is established
         self.view.set_button_states(False)
@@ -70,7 +75,6 @@ class IMUPresenter:
 
         # Get UUIDs from service
         imu1_char = self.service.IMU1_CHAR_UUID
-        imu2_char = self.service.IMU2_CHAR_UUID
             
         if self.char_uuid == imu1_char:
             result = await self.service.start_imu1_euler_notify(self._euler_notification_handler)
@@ -113,7 +117,6 @@ class IMUPresenter:
         try:
             # Get UUIDs from service
             imu1_char = self.service.IMU1_CHAR_UUID
-            imu2_char = self.service.IMU2_CHAR_UUID
             
             if self.char_uuid == imu1_char:
                 result = await self.service.stop_imu1_euler_notify()
@@ -134,6 +137,10 @@ class IMUPresenter:
         if not dialog:
             self.latest_imu_data = None
             self.latest_euler_data = None
+            
+    def set_logger(self, logger):
+        """Set IMU logger instance"""
+        self.logger = logger
 
     async def _notification_handler(self, sender, data):
         """Handle incoming notifications"""
@@ -155,23 +162,9 @@ class IMUPresenter:
             await self._try_log_data()
             
     async def _try_log_data(self):
-        """Try to notify observers if both IMU and Euler data are available"""
-        if self.latest_imu_data and self.latest_euler_data:
-            # Get UUIDs from service
-            imu1_char = self.service.IMU1_CHAR_UUID
-            imu1_euler = self.service.IMU1_EULER_UUID
-
-            # Determine IMU number from characteristic UUID
-            if self.char_uuid in [imu1_char, imu1_euler]:
-                imu_number = 1
-            else:
-                imu_number = 2
-                
-            # Get logger singleton - will use existing instance if already initialized
-            from src.util.imu_log import IMULog
-            logger = IMULog.instance()
-            if logger and logger.is_logging:
-                logger.write_csv(imu_number, self.latest_imu_data, self.latest_euler_data)
+        """Try to log data if both IMU and Euler data are available and logger is set"""
+        if self.latest_imu_data and self.latest_euler_data and self.logger:
+            self.logger.write_csv(self.latest_imu_data, self.latest_euler_data)
 
     async def _update_euler_async(self, euler_data):
         """Update view with Euler angles and calibration status asynchronously"""
