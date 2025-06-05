@@ -11,6 +11,7 @@ from src.presenter.overall_status_presenter import OverallStatusPresenter
 from src.presenter.sensor_presenter import SensorPresenter
 from src.presenter.gamepad_presenter import GamepadPresenter
 from src.presenter.profile_presenter import ProfilePresenter
+
 class App:
     """Main application class handling BLE device monitoring and IMU data visualization"""
     
@@ -60,10 +61,6 @@ class App:
                 self.main_view.device_monitor,
                 self.ble_service
             ),
-            'overall_status': OverallStatusPresenter(
-                self.main_view.overall_status_view,
-                self.ble_service
-            ),
             'timestamp': TimestampPresenter(
                 self.main_view.footer,
                 self.ble_service,
@@ -98,16 +95,19 @@ class App:
             )
         }
         
+        # Create overall status presenter after other presenters
+        presenters['overall_status'] = OverallStatusPresenter(
+            self.main_view.overall_status_view,
+            self.ble_service,
+            presenters['imu1'],
+            presenters['imu2'],
+            presenters['sensor']
+        )
+        
         # Setup footer and timestamp
         self.main_view.footer.loop = self.loop
         self.main_view.footer.on_timestamp_click = lambda: self.loop.create_task(
             self._handle_timestamp_sync()
-        )
-
-        # Connect IMU presenters to overall status view for logging
-        self.main_view.overall_status_view.set_imu_presenters(
-            presenters['imu1'],
-            presenters['imu2']
         )
         
         return presenters

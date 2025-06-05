@@ -91,19 +91,47 @@ class BaseLog(LogABS):
         self.folder_path = os.path.join(base_folder, subfolder)
         os.makedirs(self.folder_path, exist_ok=True)
 
+    def _get_filename(self):
+        """Get filename for log file - Must be implemented by subclasses"""
+        raise NotImplementedError
+
     def start_logging(self, base_folder):
-        """Start logging - Template method for subclasses"""
+        """Start logging - Common implementation"""
         self._create_log_folder(base_folder)
         self.is_logging = True
         self.stop_thread = False
+
+        # Initialize log file
+        self.file, self.writer = self._initialize_log_file(self._get_filename())
+        self.setup_header()
+        
+        # Start processing thread
+        self.thread = threading.Thread(
+            target=self._process_queue,
+            daemon=True
+        )
+        self.thread.start()
         return True
 
     def stop_logging(self):
-        """Stop logging - Template method for subclasses"""
+        """Stop logging - Common implementation"""
         self.is_logging = False
         self.stop_thread = True
+        
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=1.0)
+            
+        if self.writer:
+            self.setup_footer()
+        if self.file:
+            self.file.close()
+            
+        # Reset all attributes
+        self.queue = queue.Queue(maxsize=1000)
+        self.thread = None
+        self.file = None
+        self.writer = None
+        self.row_count = 0
 
     def _write_row(self, data):
         """Write a single row of data to CSV - Must be implemented by subclasses"""
