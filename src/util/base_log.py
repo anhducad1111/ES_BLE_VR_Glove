@@ -6,12 +6,9 @@ import threading
 import datetime
 from src.model.log_abs import LogABS
 from src.model.profile import DeviceProfile
-from src.util.log_manager import LogManager
 
 class BaseLog(LogABS):
     """Base logger class with common functionality for queue processing"""
-    
-    _instance = None
     
     def __init__(self):
         super().__init__()
@@ -22,7 +19,6 @@ class BaseLog(LogABS):
         self.row_count = 0
         self.queue = queue.Queue(maxsize=1000)
         self.thread = None
-        self.log_manager = LogManager.instance()
 
     def _process_queue(self):
         """Process data queue"""
@@ -100,7 +96,6 @@ class BaseLog(LogABS):
         self._create_log_folder(base_folder)
         self.is_logging = True
         self.stop_thread = False
-        self.log_manager.register_logger()
         return True
 
     def stop_logging(self):
@@ -109,7 +104,6 @@ class BaseLog(LogABS):
         self.stop_thread = True
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=1.0)
-        self.log_manager.unregister_logger()
 
     def _write_row(self, data):
         """Write a single row of data to CSV - Must be implemented by subclasses"""

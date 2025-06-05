@@ -1,8 +1,6 @@
-import os
-import datetime
 
 class LogManager:
-    """Singleton manager for handling shared log folder selection"""
+    """Singleton manager for handling shared log folder selection and loggers"""
     
     _instance = None
     
@@ -15,8 +13,13 @@ class LogManager:
     def __init__(self):
         self.selected_folder = "C:/ProjectIT/ES_iot/log"  # Default path
         self.folder_path = None
-        self.active_loggers = 0
         self._folder_change_callbacks = []
+        
+        # Logger instances will be created when needed
+        self.imu1_logger = None
+        self.imu2_logger = None
+        self.sensor_logger = None
+        
         self._notify_folder_change()  # Notify about default path
 
     def add_folder_change_callback(self, callback):
@@ -55,17 +58,64 @@ class LogManager:
     def clear_logging(self):
         """Reset logging state"""
         self.folder_path = None
-        self.active_loggers = 0
-        
-    def register_logger(self):
-        """Register a new active logger"""
-        self.active_loggers += 1
-        
-    def unregister_logger(self):
-        """Unregister an active logger"""
-        if self.active_loggers > 0:
-            self.active_loggers -= 1
             
-        # If no more active loggers, clear the folder selection
-        if self.active_loggers == 0:
-            self.clear_logging()
+    def get_imu1_logger(self):
+        """Get IMU1 logger instance"""
+        if not self.imu1_logger:
+            from src.util.imu_log import IMULog
+            self.imu1_logger = IMULog(1)
+        return self.imu1_logger
+            
+    def get_imu2_logger(self):
+        """Get IMU2 logger instance"""
+        if not self.imu2_logger:
+            from src.util.imu_log import IMULog
+            self.imu2_logger = IMULog(2)
+        return self.imu2_logger
+            
+    def get_sensor_logger(self):
+        """Get sensor logger instance"""
+        if not self.sensor_logger:
+            from src.util.sensor_log import SensorLog
+            self.sensor_logger = SensorLog.instance()
+        return self.sensor_logger
+
+    def start_all_logging(self):
+        """Start logging for all loggers"""
+        if not self.selected_folder:
+            return False
+            
+        try:
+            # Start IMU1 logging
+            if not self.get_imu1_logger().start_logging(self.selected_folder):
+                return False
+                
+            # Start IMU2 logging
+            if not self.get_imu2_logger().start_logging(self.selected_folder):
+                self.imu1_logger.stop_logging()
+                return False
+                
+            # Start sensor logging
+            if not self.get_sensor_logger().start_logging(self.selected_folder):
+                self.imu1_logger.stop_logging()
+                self.imu2_logger.stop_logging()
+                return False
+                
+            return True
+            
+        except Exception as e:
+            print(f"Error starting logging: {e}")
+            self.stop_all_logging()
+            return False
+
+    def stop_all_logging(self):
+        """Stop logging for all loggers"""
+        try:
+            if self.imu1_logger:
+                self.imu1_logger.stop_logging()
+            if self.imu2_logger:
+                self.imu2_logger.stop_logging()
+            if self.sensor_logger:
+                self.sensor_logger.stop_logging()
+        except:
+            pass

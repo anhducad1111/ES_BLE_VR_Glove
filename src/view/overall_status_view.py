@@ -1,15 +1,13 @@
 import customtkinter as ctk
 from src.config.app_config import AppConfig
 from src.view.button_component import ButtonComponent
-from src.util.imu_log import IMULog
-from src.util.sensor_log import SensorLog
+from src.util.log_manager import LogManager
 
 class OverallStatusView(ctk.CTkFrame):
     def __init__(self, parent):
         self.config = AppConfig()  # Get singleton instance
         
-        # Set up log manager callback
-        from src.util.log_manager import LogManager
+        # Set up log manager
         self.log_manager = LogManager.instance()
         self.log_manager.add_folder_change_callback(self._on_folder_change)
         
@@ -20,12 +18,10 @@ class OverallStatusView(ctk.CTkFrame):
             border_width=self.config.BORDER_WIDTH,
             corner_radius=self.config.CORNER_RADIUS
         )
-        # Initialize logging-related variables
+        # Initialize variables
         self.imu1_presenter = None
         self.imu2_presenter = None
         self.selected_folder = None
-        self.imu_logger = None
-        self.sensor_logger = None
         self.log_button = None
 
         # Configure base grid
@@ -137,11 +133,13 @@ class OverallStatusView(ctk.CTkFrame):
     def clear_values(self):
         """Clear all status indicators"""
         self.update_status(False, False, False)
-        if self.imu_logger:
+        
+        # Stop logging if active
+        if self.log_manager.get_imu1_logger().is_logging:
             self._stop_logging()
         
         self.log_button.configure(
-            text="Start Log",
+            text="Log IMU",
             fg_color=self.config.BUTTON_COLOR,
             hover_color=self.config.BUTTON_HOVER_COLOR
         )
@@ -151,7 +149,7 @@ class OverallStatusView(ctk.CTkFrame):
         """Create the log button"""
         self.log_button = ButtonComponent(
             parent,
-            "Start Log",
+            "Log IMU",
             command=self._on_log
         )
         self.log_button.grid(row=0, column=6, columnspan=2, padx=3 ,sticky="e")
@@ -175,7 +173,7 @@ class OverallStatusView(ctk.CTkFrame):
             return
 
         # If currently logging, stop logging
-        if self.imu_logger:
+        if self.log_manager.get_imu1_logger().is_logging:
             self._stop_logging()
             return
 
@@ -190,8 +188,8 @@ class OverallStatusView(ctk.CTkFrame):
         if hasattr(self, 'log_manager'):
             self.log_manager.remove_folder_change_callback(self._on_folder_change)
             
-        # Existing cleanup
-        if self.imu_logger:
+        # Stop logging if active
+        if self.log_manager.get_imu1_logger().is_logging:
             self._stop_logging()
             
         super().destroy()
@@ -199,44 +197,43 @@ class OverallStatusView(ctk.CTkFrame):
     def _on_folder_change(self, folder):
         """Handle folder selection changes from LogManager"""
         self.selected_folder = folder
-        self.log_button.configure(text="Start Log")
+        if folder:
+            self.log_button.configure(text="Start Log IMU")
+        else:
+            self.log_button.configure(text="Log IMU")
 
     def _start_logging(self):
         """Start logging IMU and Sensor data"""
         try:
-            # Start IMU logging
-            self.imu_logger = IMULog.instance()
-            if self.imu_logger.start_logging(self.selected_folder):
-                # Start sensor logging
-                self.sensor_logger = SensorLog.instance()
-                if self.sensor_logger.start_logging(self.selected_folder):
-                    # Update button
-                    self.log_button.configure(text="Stop Log", fg_color="darkred", hover_color="#8B0000")
-                else:
-                    # Stop IMU logging if sensor logging fails
-                    self.imu_logger.stop_logging()
-                    self.imu_logger = None
-                    self.sensor_logger = None
+            # Set loggers in presenters
+            self.imu1_presenter.set_logger(self.log_manager.get_imu1_logger())
+            self.imu2_presenter.set_logger(self.log_manager.get_imu2_logger())
+            
+            # Start all logging
+            if self.log_manager.start_all_logging():
+                # Update button
+                self.log_button.configure(text="Stop Log IMU", fg_color="darkred", hover_color="#8B0000")
             else:
-                self.imu_logger = None
+                # Reset presenters if logging fails
+                self.imu1_presenter.set_logger(None)
+                self.imu2_presenter.set_logger(None)
+                
         except Exception as e:
             print(f"Error starting logging: {e}")
-            self.imu_logger = None
-            self.sensor_logger = None
+            self._stop_logging()
 
     def _stop_logging(self):
         """Stop logging IMU and Sensor data"""
-        if self.imu_logger:
-            try:
-                self.imu_logger.stop_logging()
-                if self.sensor_logger:
-                    self.sensor_logger.stop_logging()
-                # Observer pattern handles logging automatically
-                self.selected_folder = None  # Reset folder selection
-                self.log_button.configure(text="Start Log", fg_color=self.config.BUTTON_COLOR, hover_color=self.config.BUTTON_HOVER_COLOR)
-            finally:
-                self.imu_logger = None
-                self.sensor_logger = None
+        try:
+            self.log_manager.stop_all_logging()
+            self.imu1_presenter.set_logger(None)
+            self.imu2_presenter.set_logger(None)
+            
+            # Reset button
+            self.selected_folder = None
+            self.log_button.configure(text="Log", fg_color=self.config.BUTTON_COLOR, hover_color=self.config.BUTTON_HOVER_COLOR)
+        except Exception as e:
+            print(f"Error stopping logging: {e}")
 
     def set_button_states(self, enabled):
         """Enable/disable buttons"""
