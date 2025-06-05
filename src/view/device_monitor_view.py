@@ -125,7 +125,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         self.info_frame.pack_propagate(False)
 
         # Configure grid columns
-        for i in range(12):
+        for i in range(13):
             self.info_frame.grid_columnconfigure(i, weight=1, uniform="col")
 
         self._create_info_header()
@@ -152,21 +152,29 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         """Create the Add Device/Disconnect button"""
         button_container = ctk.CTkFrame(
             self.info_frame,
-            fg_color="transparent"
+            fg_color="transparent",
         )
-        button_container.grid(row=0, column=9, rowspan=3, columnspan=3, sticky="e", padx=2, pady=2)
+        button_container.grid(row=0, column=9, rowspan=3, columnspan=4, sticky="e", padx=2, pady=2)
 
+        button_container.grid_columnconfigure(0, weight=0)  
+        button_container.grid_columnconfigure(1, weight=0) 
+
+        # Add device button
         self.device_button = ButtonComponent(
             button_container,
             "Add device",
             command=self._handle_device_button
         )
-        self.device_button.grid(row=1, column=1, padx=12, pady=(0, 8), sticky="e")
+        self.device_button.grid(row=2, column=1, pady=(8, 8), padx=12, sticky="e", )
 
-        # Create path input container under device button
-        path_container = ctk.CTkFrame(button_container, fg_color="transparent")
-        path_container.grid(row=2, column=0, columnspan=3, padx=12)
-
+        # Path container
+        path_container = ctk.CTkFrame(button_container, fg_color="transparent") 
+        path_container.grid(row=1, column=1, pady=(0, 8), padx=12, sticky="e")
+        
+        # Configure grid in path_container
+        path_container.grid_columnconfigure(0, weight=0)  # For folder icon
+        path_container.grid_columnconfigure(1, weight=0)  # For entry field
+        
         # Create folder icon
         icon = Image.open("assets/folder.png")
         folder_image = ctk.CTkImage(
@@ -182,7 +190,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             image=folder_image,
             cursor="hand2"
         )
-        folder_label.pack(side="left", padx=(0, 10))
+        folder_label.grid(row=0, column=0, padx=(0, 10), sticky="w")
         folder_label.bind("<Button-1>", lambda e: self._on_choose_folder())
 
         # Path entry field
@@ -191,12 +199,17 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             "",
             entry_width=200
         )
-        self.path_entry.pack(side="left", fill="x", expand=True)
+        self.path_entry.grid(row=0, column=1, sticky="e")
 
-        # Set path from LogManager
-        self.path_entry.entry.configure(state="normal")
-        self.path_entry.entry.delete(0, "end")
-        self.path_entry.entry.insert(0, self.log_manager.get_selected_folder())
+        # Set path from LogManager - Thay đổi thứ tự các bước
+        self.path_entry.entry.delete(0, "end")  # Xóa nội dung cũ
+        self.path_entry.entry.insert(0, self.log_manager.get_selected_folder())  # Thêm đường dẫn mới
+        self.path_entry.entry.configure(
+            state="readonly",  # Sau khi đã insert text mới set readonly
+            cursor="arrow"
+        )
+        
+    
         
     def _create_info_fields(self):
         """Create the information fields grid"""
@@ -378,12 +391,20 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
     def _on_choose_folder(self):
         """Handle choose folder button click"""
         if not self._is_any_logger_active():
+            # Tạm thời enable entry để có thể thay đổi nội dung
+            self.path_entry.entry.configure(state="normal")
+            
             folder = filedialog.askdirectory(initialdir=self.log_manager.get_selected_folder())
             if folder:
-                self.path_entry.entry.configure(state="normal")
                 self.path_entry.entry.delete(0, "end")
                 self.path_entry.entry.insert(0, folder)
                 self.log_manager.setup_logging_folder(folder)
+            
+            # Set lại readonly sau khi đã thay đổi
+            self.path_entry.entry.configure(
+                state="readonly",
+                cursor="arrow"
+            )
         
     def _is_any_logger_active(self):
         """Check if any logger is currently active"""
