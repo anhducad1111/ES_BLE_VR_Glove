@@ -30,6 +30,21 @@ class BaseLog(LogABS):
                 self.queue.task_done()
             except queue.Empty:
                 continue
+            
+        # Sau khi nhận lệnh stop, xử lý nốt dữ liệu còn trong queue
+        self._process_remaining_data()
+
+    def _process_remaining_data(self):
+        """Process any remaining data in the queue before stopping"""
+        try:
+            while True:
+                # Get data without waiting (non-blocking)
+                data = self.queue.get_nowait()
+                if self.writer:
+                    self._write_row(data)
+                self.queue.task_done()
+        except queue.Empty:
+            pass
 
     def setup_header(self, writer=None, file=None):
         """Write CSV file header with common format and specific columns"""
@@ -97,11 +112,13 @@ class BaseLog(LogABS):
 
     def start_logging(self, base_folder):
         """Start logging - Common implementation"""
-        self._create_log_folder(base_folder)
-        self.is_logging = True
+        # Create new queue and thread
+        self.queue = queue.Queue(maxsize=1000)
         self.stop_thread = False
-
-        # Initialize log file
+        self.is_logging = True
+        
+        # Create log folder and file
+        self._create_log_folder(base_folder)
         self.file, self.writer = self._initialize_log_file(self._get_filename())
         self.setup_header()
         
@@ -115,19 +132,25 @@ class BaseLog(LogABS):
 
     def stop_logging(self):
         """Stop logging - Common implementation"""
+        if not self.is_logging:
+            return
+            
+        # Signal thread to stop and wait for remaining data
         self.is_logging = False
         self.stop_thread = True
         
         if self.thread and self.thread.is_alive():
+            # Wait for thread to finish processing queue
+            self.queue.join() 
             self.thread.join(timeout=1.0)
             
+        # Write footer and close file
         if self.writer:
             self.setup_footer()
         if self.file:
             self.file.close()
             
         # Reset all attributes
-        self.queue = queue.Queue(maxsize=1000)
         self.thread = None
         self.file = None
         self.writer = None
