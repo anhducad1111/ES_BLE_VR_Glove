@@ -1,6 +1,8 @@
 from src.view.view_layout.base_imu_view import BaseIMUView
-from src.view.view_dialog.imu_config_dialog import IMUConfigDialog
-from src.view.view_dialog.imu_calibration_dialog import IMUCalibrationDialog
+from src.view.view_dialog import (
+    IMUConfigDialog,
+    IMUCalibrationDialog
+)
 from src.util.imu_config import IMUConfigUtil
 
 class IMU2View(BaseIMUView):
