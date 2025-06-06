@@ -8,3 +8,5 @@ src/model/__pycache__/
 src/presenter/__pycache__/
 src/view/__pycache__/
 src/config/__pycache__/
+
+assets/gatttable.csv
