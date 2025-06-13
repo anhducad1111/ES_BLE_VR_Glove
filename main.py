@@ -4,13 +4,15 @@ from src.config.app_config import AppConfig
 from src.view.main_view import MainView
 from src.model.esp32_service import ESP32BLEService
 from src.model.device_manager import DeviceManager
-from src.presenter.connection_presenter import ConnectionPresenter
-from src.presenter.imu_presenter import IMUPresenter
-from src.presenter.timestamp_presenter import TimestampPresenter
-from src.presenter.overall_status_presenter import OverallStatusPresenter
-from src.presenter.sensor_presenter import SensorPresenter
-from src.presenter.gamepad_presenter import GamepadPresenter
-from src.presenter.profile_presenter import ProfilePresenter
+from src.presenter import (
+    ConnectionPresenter,
+    GamepadPresenter,
+    IMUPresenter,
+    OverallStatusPresenter,
+    ProfilePresenter,
+    SensorPresenter,
+    TimestampPresenter
+)
 
 class App:
     """Main application class handling BLE device monitoring and IMU data visualization"""

@@ -1,9 +1,11 @@
 import customtkinter as ctk
 from src.config.app_config import AppConfig
-from src.view.view_component.graph_view import GraphView
-from src.view.view_component.coordinate_entry import CoordinateEntry
-from src.view.view_component.button_component import ButtonComponent
-from src.view.view_dialog.other_config_dialog import OtherConfigDialog
+from src.view.view_component import (
+    ButtonComponent,
+    CoordinateEntry,
+    GraphView
+)
+from src.view.view_dialog import OtherConfigDialog
 
 class GamepadView(ctk.CTkFrame):
     def __init__(self, parent):

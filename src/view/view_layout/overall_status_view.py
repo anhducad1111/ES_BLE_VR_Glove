@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from src.config.app_config import AppConfig
-from src.view.view_component.button_component import ButtonComponent
+from src.view.view_component import ButtonComponent
 from src.util.log_manager import LogManager
 from dataclasses import dataclass
 from typing import Dict
