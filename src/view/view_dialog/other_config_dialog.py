@@ -1,22 +1,28 @@
-import customtkinter as ctk
 from dataclasses import dataclass
 from typing import Callable, Optional
+
+import customtkinter as ctk
+
 from src.config.app_config import AppConfig
 from src.view.view_component.button_component import ButtonComponent
 from src.view.view_component.coordinate_entry import CoordinateEntry
+
 from .base_dialog import BaseDialog, DialogConfig, DialogStyle
+
 
 @dataclass
 class OtherConfigSettings:
     """Configuration for other settings dialog"""
+
     input_bg: str = "#1F1F1F"
     input_border: str = "#2A2A2A"
     description_color: str = "#666666"
     default_rate: int = 1000
 
+
 class OtherConfigDialog(BaseDialog):
     """Dialog for configuring other settings"""
-    
+
     def __init__(self, parent: ctk.CTk):
         self.settings = OtherConfigSettings()
         self._destroyed = False
@@ -33,11 +39,11 @@ class OtherConfigDialog(BaseDialog):
                 content_bg="#141414",
                 border_color="#333333",
                 border_width=1,
-                corner_radius=8
-            )
+                corner_radius=8,
+            ),
         )
         super().__init__(parent, config)
-        
+
         # Override window settings
         # self.overrideredirect(True)  # Remove window decorations
 
@@ -47,7 +53,7 @@ class OtherConfigDialog(BaseDialog):
             self.content_frame,
             text="OTHER Configuration",
             font=("Inter Bold", 18),
-            text_color="white"
+            text_color="white",
         )
         header.pack(anchor="w", pady=(0, 30))
 
@@ -63,7 +69,7 @@ class OtherConfigDialog(BaseDialog):
             fg_color=self.settings.input_bg,
             corner_radius=12,
             border_width=1,
-            border_color=self.settings.input_border
+            border_color=self.settings.input_border,
         )
         container.pack(fill="x", pady=(0, 30), ipady=20)
 
@@ -76,15 +82,13 @@ class OtherConfigDialog(BaseDialog):
             content,
             text="Rate (ms)",
             font=("Inter", 12),
-            text_color=self.settings.description_color
+            text_color=self.settings.description_color,
         )
         description.pack(anchor="w", pady=(0, 10))
 
         # Rate input
         self.rate_entry = CoordinateEntry(
-            content,
-            "Joystick, flex, force sensor cap buttons",
-            entry_width=120
+            content, "Joystick, flex, force sensor cap buttons", entry_width=120
         )
         self.rate_entry.pack(anchor="w")
         self.rate_entry.entry.configure(state="normal")

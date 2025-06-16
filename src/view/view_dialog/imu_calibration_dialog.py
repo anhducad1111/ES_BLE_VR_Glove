@@ -1,9 +1,13 @@
-import customtkinter as ctk
-from typing import Optional, Callable
 import subprocess
+from typing import Callable, Optional
+
+import customtkinter as ctk
+
 from src.config.app_config import AppConfig
 from src.view.view_component.button_component import ButtonComponent
+
 from .base_dialog import BaseDialog, DialogConfig, DialogStyle
+
 
 class IMUCalibrationDialog(BaseDialog):
     def __init__(self, parent: ctk.CTk, imu_label: str, imu_service):
@@ -16,8 +20,8 @@ class IMUCalibrationDialog(BaseDialog):
                 content_bg="#1F1F1F",
                 border_color="#1F1F1F",
                 border_width=1,
-                corner_radius=8
-            )
+                corner_radius=8,
+            ),
         )
 
         self._destroyed = False
@@ -42,12 +46,12 @@ class IMUCalibrationDialog(BaseDialog):
         """Create custom title section"""
         title_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         title_frame.pack(fill="x", pady=(0, 20))
-        
+
         header = ctk.CTkLabel(
             title_frame,
             text=f"{self.imu_label} Calibration",
             font=("Inter Bold", 16),
-            text_color="white"
+            text_color="white",
         )
         header.pack(side="left")
 
@@ -58,7 +62,7 @@ class IMUCalibrationDialog(BaseDialog):
             self.content_frame,
             text="CMD: --",
             font=("Inter", 12),
-            text_color="#FFD700"  # Gold color
+            text_color="#FFD700",  # Gold color
         )
         self.debug_label.pack(pady=(0, 5))
 
@@ -67,7 +71,7 @@ class IMUCalibrationDialog(BaseDialog):
             self.content_frame,
             text="Please place the device stable on flat surface\nbefore starting the calibration process",
             font=("Inter", 14),
-            text_color="#FF4B4B"  # Red color
+            text_color="#FF4B4B",  # Red color
         )
         warning.pack(pady=(0, 20))
 
@@ -76,16 +80,13 @@ class IMUCalibrationDialog(BaseDialog):
             self.content_frame,
             text="Calibration gyroscope, accelerometer and magnetometer",
             font=("Inter", 13),
-            text_color="white"
+            text_color="white",
         )
         description.pack(pady=(0, 20))
 
         # Countdown/Status label
         self.status_label = ctk.CTkLabel(
-            self.content_frame,
-            text="",
-            font=("Inter Bold", 24),
-            text_color="white"
+            self.content_frame, text="", font=("Inter Bold", 24), text_color="white"
         )
         self.status_label.pack(pady=(0, 30))
 
@@ -99,7 +100,7 @@ class IMUCalibrationDialog(BaseDialog):
             "Cancel",
             command=self.destroy,
             fg_color="#232323",
-            hover_color="#333333"
+            hover_color="#333333",
         )
         self.cancel_button.pack(side="left")
 
@@ -109,7 +110,7 @@ class IMUCalibrationDialog(BaseDialog):
             "START",
             command=self._on_start,
             fg_color="#0094FF",
-            hover_color="#0078CC"
+            hover_color="#0078CC",
         )
         self.start_button.pack(side="right")
 
@@ -120,7 +121,7 @@ class IMUCalibrationDialog(BaseDialog):
             command=self._on_stop,
             fg_color="#666666",
             hover_color="#666666",
-            state="disabled"
+            state="disabled",
         )
         self.stop_button.pack(side="right", padx=10)
 
@@ -142,7 +143,7 @@ class IMUCalibrationDialog(BaseDialog):
         try:
             # Write appropriate CMD value based on IMU label
             cmd_value = 2 if self.imu_label == "IMU1" else 3
-            if hasattr(self, 'imu_service'):
+            if hasattr(self, "imu_service"):
                 self.imu_service.loop.create_task(self._write_cmd(cmd_value))
             # Launch MotionCal
             subprocess.Popen(["MotionCal.exe"], shell=True)
@@ -167,24 +168,20 @@ class IMUCalibrationDialog(BaseDialog):
                 fg_color="transparent",
                 hover_color="#333333",
                 text_color="#00FF00",  # Bright green
-                font=("Inter Bold", 18)
+                font=("Inter Bold", 18),
             )
             self.open_tool_button.pack()
 
             # Enable STOP button
             self.stop_button.configure(
-                state="normal",
-                fg_color="#FF4B4B",
-                hover_color="#CC0000"
+                state="normal", fg_color="#FF4B4B", hover_color="#CC0000"
             )
 
     def _on_start(self) -> None:
         """Handle start button click"""
         self.start_button.configure(state="disabled")
         self.stop_button.configure(
-            state="disabled",
-            fg_color="#666666",
-            hover_color="#666666"
+            state="disabled", fg_color="#666666", hover_color="#666666"
         )
         self._countdown_running = True
         self._current_count = 10
@@ -194,16 +191,14 @@ class IMUCalibrationDialog(BaseDialog):
         """Handle stop button click"""
         self._countdown_running = False
         self.stop_button.configure(
-            state="disabled",
-            fg_color="#666666",
-            hover_color="#666666"
+            state="disabled", fg_color="#666666", hover_color="#666666"
         )
         self.start_button.configure(state="normal")
         if self.status_label.cget("text") != "OPEN TOOL":
             self.status_label.configure(text="")
-        
+
         # Set CMD to RUN (1) before closing
-        if hasattr(self, 'imu_service'):
+        if hasattr(self, "imu_service"):
             self.imu_service.loop.create_task(self._write_cmd(1))
         self.destroy()
 
@@ -221,19 +216,16 @@ class IMUCalibrationDialog(BaseDialog):
             data = await self.imu_service.read_config()
             if data:
                 cmd_value = data[0]
-                cmd_text = {
-                    0: "IDLE",
-                    1: "RUN",
-                    2: "IMU1 CALIB",
-                    3: "IMU2 CALIB"
-                }.get(cmd_value, f"Unknown ({cmd_value})")
+                cmd_text = {0: "IDLE", 1: "RUN", 2: "IMU1 CALIB", 3: "IMU2 CALIB"}.get(
+                    cmd_value, f"Unknown ({cmd_value})"
+                )
                 self.debug_label.configure(text=f"CMD: {cmd_text}")
         except Exception as e:
             self.debug_label.configure(text=f"CMD: Error ({str(e)})")
 
     def _start_debug_updates(self) -> None:
         """Start periodic debug label updates"""
-        if hasattr(self, 'imu_service'):
+        if hasattr(self, "imu_service"):
             self.imu_service.loop.create_task(self._update_debug_label())
             if not self._destroyed:
                 self.after(3000, self._start_debug_updates)  # Update every 3 seconds

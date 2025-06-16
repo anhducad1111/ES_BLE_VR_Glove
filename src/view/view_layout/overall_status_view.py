@@ -1,9 +1,12 @@
-import customtkinter as ctk
-from src.config.app_config import AppConfig
-from src.view.view_component import ButtonComponent
-from src.util.log_manager import LogManager
 from dataclasses import dataclass
 from typing import Dict
+
+import customtkinter as ctk
+
+from src.config.app_config import AppConfig
+from src.util.log_manager import LogManager
+from src.view.view_component import ButtonComponent
+
 
 @dataclass
 class StatusConfig:
@@ -11,28 +14,29 @@ class StatusConfig:
     key: str
     start_col: int
 
+
 class OverallStatusView(ctk.CTkFrame):
     """A view component that displays overall system status and logging controls"""
 
     STATUS_CONFIGS = [
         StatusConfig("Fuelgause:", "fuelgause", 0),
         StatusConfig("IMU1:", "imu1", 2),
-        StatusConfig("IMU2:", "imu2", 4)
+        StatusConfig("IMU2:", "imu2", 4),
     ]
 
     def __init__(self, parent: ctk.CTk):
         self.config = AppConfig()
         self.log_manager = LogManager.instance()
         self.status_labels: Dict[str, ctk.CTkLabel] = {}
-        
+
         super().__init__(
             parent,
             fg_color=self.config.PANEL_COLOR,
             border_color=self.config.BORDER_COLOR,
             border_width=self.config.BORDER_WIDTH,
-            corner_radius=self.config.CORNER_RADIUS
+            corner_radius=self.config.CORNER_RADIUS,
         )
-        
+
         self._init_variables()
         self._setup_layout()
         self._init_components()
@@ -65,7 +69,7 @@ class OverallStatusView(ctk.CTkFrame):
             self,
             text="OVERALL STATUS",
             font=self.config.HEADER_FONT,
-            text_color=self.config.TEXT_COLOR
+            text_color=self.config.TEXT_COLOR,
         )
         header_label.grid(row=0, column=0, sticky="nw", padx=12, pady=(12, 0))
 
@@ -99,7 +103,9 @@ class OverallStatusView(ctk.CTkFrame):
         status = self._create_status_indicator(parent, config)
         self.status_labels[config.key] = status
 
-    def _create_status_label(self, parent: ctk.CTkFrame, config: StatusConfig) -> ctk.CTkLabel:
+    def _create_status_label(
+        self, parent: ctk.CTkFrame, config: StatusConfig
+    ) -> ctk.CTkLabel:
         """Create a status label"""
         label = ctk.CTkLabel(
             parent,
@@ -108,15 +114,17 @@ class OverallStatusView(ctk.CTkFrame):
             text_color=self.config.TEXT_COLOR,
         )
         label.grid(
-            row=0, 
-            column=config.start_col, 
-            sticky="w", 
-            padx=(12 if config.start_col == 0 else 20, 10), 
-            pady=12
+            row=0,
+            column=config.start_col,
+            sticky="w",
+            padx=(12 if config.start_col == 0 else 20, 10),
+            pady=12,
         )
         return label
 
-    def _create_status_indicator(self, parent: ctk.CTkFrame, config: StatusConfig) -> ctk.CTkLabel:
+    def _create_status_indicator(
+        self, parent: ctk.CTkFrame, config: StatusConfig
+    ) -> ctk.CTkLabel:
         """Create a status indicator"""
         status = ctk.CTkLabel(
             parent,
@@ -124,23 +132,13 @@ class OverallStatusView(ctk.CTkFrame):
             font=self.config.TEXT_FONT,
             text_color="red",
         )
-        status.grid(
-            row=0, 
-            column=config.start_col + 1, 
-            sticky="w", 
-            padx=10, 
-            pady=12
-        )
+        status.grid(row=0, column=config.start_col + 1, sticky="w", padx=10, pady=12)
         return status
 
     def update_status(self, fuelgause: bool, imu1: bool, imu2: bool) -> None:
         """Update all status indicators"""
-        status_values = {
-            "fuelgause": fuelgause,
-            "imu1": imu1,
-            "imu2": imu2
-        }
-        
+        status_values = {"fuelgause": fuelgause, "imu1": imu1, "imu2": imu2}
+
         for key, is_running in status_values.items():
             self._update_status_indicator(key, is_running)
 
@@ -148,16 +146,12 @@ class OverallStatusView(ctk.CTkFrame):
         """Update a single status indicator"""
         self.status_labels[key].configure(
             text="RUNNING" if is_running else "NONE",
-            text_color=self.config.BUTTON_COLOR if is_running else "red"
+            text_color=self.config.BUTTON_COLOR if is_running else "red",
         )
 
     def _create_log_button(self, parent: ctk.CTkFrame) -> None:
         """Create and configure the log button"""
-        self.log_button = ButtonComponent(
-            parent,
-            "Start Log",
-            command=self._on_log
-        )
+        self.log_button = ButtonComponent(parent, "Start Log", command=self._on_log)
         self.log_button.grid(row=0, column=6, columnspan=2, padx=3, sticky="e")
         self.log_button.configure(state="disabled")
 
@@ -178,9 +172,7 @@ class OverallStatusView(ctk.CTkFrame):
     def _update_button_for_logging(self) -> None:
         """Update button appearance for logging state"""
         self.log_button.configure(
-            text="Stop Log",
-            fg_color="darkred",
-            hover_color="#8B0000"
+            text="Stop Log", fg_color="darkred", hover_color="#8B0000"
         )
 
     def _update_button_for_stopped(self) -> None:
@@ -189,7 +181,7 @@ class OverallStatusView(ctk.CTkFrame):
         self.log_button.configure(
             text="Start Log",
             fg_color=self.config.BUTTON_COLOR,
-            hover_color=self.config.BUTTON_HOVER_COLOR
+            hover_color=self.config.BUTTON_HOVER_COLOR,
         )
 
     def _on_log(self) -> None:
@@ -242,7 +234,7 @@ class OverallStatusView(ctk.CTkFrame):
 
     def destroy(self) -> None:
         """Clean up resources before destruction"""
-        if hasattr(self, 'log_manager'):
+        if hasattr(self, "log_manager"):
             self.log_manager.remove_folder_change_callback(self._on_folder_change)
             if self.log_manager.get_imu1_logger().is_logging:
                 self._stop_logging()

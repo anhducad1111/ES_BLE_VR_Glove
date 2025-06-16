@@ -1,15 +1,17 @@
-import os
 import csv
-import time
+import datetime
+import os
 import queue
 import threading
-import datetime
+import time
+
 from src.model.log_abs import LogABS
 from src.model.profile import DeviceProfile
 
+
 class BaseLog(LogABS):
     """Base logger class with common functionality for queue processing"""
-    
+
     def __init__(self):
         super().__init__()
         self.is_logging = False
@@ -30,7 +32,7 @@ class BaseLog(LogABS):
                 self.queue.task_done()
             except queue.Empty:
                 continue
-            
+
         # Sau khi nhận lệnh stop, xử lý nốt dữ liệu còn trong queue
         self._process_remaining_data()
 
@@ -54,16 +56,16 @@ class BaseLog(LogABS):
             file = self.file
         if not writer:
             return
-            
+
         try:
             profile = DeviceProfile.get_instance()
-            
+
             # Write common header
             now = datetime.datetime.now()
             writer.writerow([f"{now.strftime('%H:%M:%S_%Y%m%d')} version 00.00.01"])
             writer.writerow([f"Device: {profile.name}, Firmware: {profile.firmware}"])
             writer.writerow([])
-            
+
             # Write specific headers - to be implemented by subclasses
             headers = self._get_headers()
             if headers:
@@ -82,12 +84,12 @@ class BaseLog(LogABS):
             row_count = self.row_count
         if not writer:
             return
-            
+
         try:
             writer.writerow([])
-            writer.writerow(['Summary'])
-            writer.writerow([f'Total rows: {row_count}'])
-            writer.writerow(['End of recording'])
+            writer.writerow(["Summary"])
+            writer.writerow([f"Total rows: {row_count}"])
+            writer.writerow(["End of recording"])
             file.flush()
         except:
             pass
@@ -95,7 +97,7 @@ class BaseLog(LogABS):
     def _initialize_log_file(self, filename):
         """Initialize a new log file with common setup"""
         file_path = os.path.join(self.folder_path, filename)
-        file = open(file_path, 'w', newline='')
+        file = open(file_path, "w", newline="")
         writer = csv.writer(file)
         return file, writer
 
@@ -116,17 +118,14 @@ class BaseLog(LogABS):
         self.queue = queue.Queue(maxsize=1000)
         self.stop_thread = False
         self.is_logging = True
-        
+
         # Create log folder and file
         self._create_log_folder(base_folder)
         self.file, self.writer = self._initialize_log_file(self._get_filename())
         self.setup_header()
-        
+
         # Start processing thread
-        self.thread = threading.Thread(
-            target=self._process_queue,
-            daemon=True
-        )
+        self.thread = threading.Thread(target=self._process_queue, daemon=True)
         self.thread.start()
         return True
 
@@ -134,22 +133,22 @@ class BaseLog(LogABS):
         """Stop logging - Common implementation"""
         if not self.is_logging:
             return
-            
+
         # Signal thread to stop and wait for remaining data
         self.is_logging = False
         self.stop_thread = True
-        
+
         if self.thread and self.thread.is_alive():
             # Wait for thread to finish processing queue
-            self.queue.join() 
+            self.queue.join()
             self.thread.join(timeout=1.0)
-            
+
         # Write footer and close file
         if self.writer:
             self.setup_footer()
         if self.file:
             self.file.close()
-            
+
         # Reset all attributes
         self.thread = None
         self.file = None

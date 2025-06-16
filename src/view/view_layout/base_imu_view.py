@@ -1,11 +1,11 @@
 from typing import Dict, List, Optional, Union
+
 import customtkinter as ctk
+
 from src.config.app_config import AppConfig
-from src.view.view_component import (
-    ButtonComponent,
-    CoordinateEntry
-)
+from src.view.view_component import ButtonComponent, CoordinateEntry
 from src.view.view_interfaces import IMUViewInterface
+
 
 class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
     # Constants
@@ -15,20 +15,24 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
     HEADER_PADDING = 12
     FRAME_PADDING = 10
     DEFAULT_VALUE = 0.0
-    
+
     # Sensor configurations
     SENSOR_CONFIGS = {
-        'accel': {'label': "Accel (mg)", 'axes': ["X", "Y", "Z"], 'width': 120},
-        'gyro': {'label': "Gyro (dps)", 'axes': ["X", "Y", "Z"], 'width': 120},
-        'magn': {'label': "Magn (uT)", 'axes': ["X", "Y", "Z"], 'width': 120},
-        'euler': {'label': "Euler (deg)", 'axes': ["Pitch", "Roll", "Yaw"], 'width': 100}
+        "accel": {"label": "Accel (mg)", "axes": ["X", "Y", "Z"], "width": 120},
+        "gyro": {"label": "Gyro (dps)", "axes": ["X", "Y", "Z"], "width": 120},
+        "magn": {"label": "Magn (uT)", "axes": ["X", "Y", "Z"], "width": 120},
+        "euler": {
+            "label": "Euler (deg)",
+            "axes": ["Pitch", "Roll", "Yaw"],
+            "width": 100,
+        },
     }
 
     def __init__(self, parent: ctk.CTk, title: str):
         self.config = AppConfig()  # Get singleton instance
         self.imu_service = None  # Will be set by presenter
         self.loop = None  # Will be set by presenter
-        
+
         super().__init__(
             parent,
             fg_color=self.config.PANEL_COLOR,
@@ -41,9 +45,9 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
         self._create_header(title)
         self._create_data_frame()
         self._create_sensor_frames()
-        
+
         self._create_button_container()
-        
+
     def _setup_grid(self) -> None:
         """Setup the main grid configuration."""
         self.grid_columnconfigure(0, weight=1)
@@ -57,16 +61,24 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
             font=self.config.HEADER_FONT,
             text_color=self.config.TEXT_COLOR,
         )
-        header_label.grid(row=0, column=0, sticky="nw",
-                         padx=self.HEADER_PADDING,
-                         pady=(self.HEADER_PADDING, 0))
+        header_label.grid(
+            row=0,
+            column=0,
+            sticky="nw",
+            padx=self.HEADER_PADDING,
+            pady=(self.HEADER_PADDING, 0),
+        )
 
     def _create_data_frame(self) -> None:
         """Create and configure the main data frame."""
         self.data_frame = ctk.CTkFrame(self, width=0, fg_color="transparent")
-        self.data_frame.grid(row=1, column=0, sticky="nsew",
-                           padx=(self.HEADER_PADDING, 0),
-                           pady=(0, self.HEADER_PADDING))
+        self.data_frame.grid(
+            row=1,
+            column=0,
+            sticky="nsew",
+            padx=(self.HEADER_PADDING, 0),
+            pady=(0, self.HEADER_PADDING),
+        )
         self.data_frame.grid_columnconfigure(0, weight=0)
         self.data_frame.grid_rowconfigure((0, 1, 2, 3), weight=1)
 
@@ -75,7 +87,8 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
         self.sensor_entries = {}
         for idx, (sensor_type, config) in enumerate(self.SENSOR_CONFIGS.items()):
             self.sensor_entries[sensor_type] = self._create_sensor_frame(
-                idx, config['label'], config['axes'], config['width'])
+                idx, config["label"], config["axes"], config["width"]
+            )
 
     def _create_button_container(self) -> None:
         """Create and configure the button container."""
@@ -85,9 +98,9 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
             width=0,
             height=self.BUTTON_HEIGHT,
         )
-        button_container.grid(row=2, column=0, sticky="es",
-                            padx=self.FRAME_PADDING,
-                            pady=(0, 20))
+        button_container.grid(
+            row=2, column=0, sticky="es", padx=self.FRAME_PADDING, pady=(0, 20)
+        )
         button_container.grid_columnconfigure(2, weight=1)
 
         self._create_calibration_label(button_container)
@@ -99,26 +112,31 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
             container,
             text="Calib Status: --",
             font=self.config.LABEL_FONT,
-            text_color="#FFFFFF"
+            text_color="#FFFFFF",
         )
-        self.calib_status_label.grid(row=0, column=0,
-                                   sticky="w",
-                                   padx=self.FRAME_PADDING)
+        self.calib_status_label.grid(
+            row=0, column=0, sticky="w", padx=self.FRAME_PADDING
+        )
 
     def _create_control_buttons(self, container: ctk.CTkFrame) -> None:
         """Create configure and calibrate buttons."""
         self.button_config = ButtonComponent(
-            container, "Configure", command=self._handle_config_click)
-        self.button_config.grid(row=0, column=3, sticky="e",
-                              padx=(0, self.FRAME_PADDING), pady=0)
+            container, "Configure", command=self._handle_config_click
+        )
+        self.button_config.grid(
+            row=0, column=3, sticky="e", padx=(0, self.FRAME_PADDING), pady=0
+        )
 
         self.button_calibrate = ButtonComponent(
-            container, "Calibrate", command=self._on_calibrate)
-        self.button_calibrate.grid(row=0, column=4, sticky="e",
-                                 padx=(0, self.FRAME_PADDING), pady=0)
+            container, "Calibrate", command=self._on_calibrate
+        )
+        self.button_calibrate.grid(
+            row=0, column=4, sticky="e", padx=(0, self.FRAME_PADDING), pady=0
+        )
 
-    def _create_sensor_frame(self, row: int, label_text: str,
-                           axis_labels: List[str], entry_width: int = 80) -> Dict[str, CoordinateEntry]:
+    def _create_sensor_frame(
+        self, row: int, label_text: str, axis_labels: List[str], entry_width: int = 80
+    ) -> Dict[str, CoordinateEntry]:
         """Create a frame for sensor data with coordinate entries."""
         frame = ctk.CTkFrame(
             self.data_frame,
@@ -140,7 +158,7 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
         entries = {}
         for i, axis in enumerate(axis_labels):
             entry = CoordinateEntry(frame, axis, entry_width)
-            entry.grid(row=0, column=i+1, padx=(0, 10))
+            entry.grid(row=0, column=i + 1, padx=(0, 10))
             entries[axis.lower()] = entry
 
         return entries
@@ -148,29 +166,31 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
     # Sensor update methods
     def update_accel(self, x: float, y: float, z: float) -> None:
         """Update accelerometer values."""
-        self._update_xyz_values('accel', x, y, z)
+        self._update_xyz_values("accel", x, y, z)
 
     def update_gyro(self, x: float, y: float, z: float) -> None:
         """Update gyroscope values."""
-        self._update_xyz_values('gyro', x, y, z)
+        self._update_xyz_values("gyro", x, y, z)
 
     def update_magn(self, x: float, y: float, z: float) -> None:
         """Update magnetometer values."""
-        self._update_xyz_values('magn', x, y, z)
+        self._update_xyz_values("magn", x, y, z)
 
     def update_euler(self, pitch: float, roll: float, yaw: float) -> None:
         """Update euler angles."""
-        entries = self.sensor_entries['euler']
-        entries['pitch'].set_value(pitch)
-        entries['roll'].set_value(roll)
-        entries['yaw'].set_value(yaw)
+        entries = self.sensor_entries["euler"]
+        entries["pitch"].set_value(pitch)
+        entries["roll"].set_value(roll)
+        entries["yaw"].set_value(yaw)
 
-    def _update_xyz_values(self, sensor_type: str, x: float, y: float, z: float) -> None:
+    def _update_xyz_values(
+        self, sensor_type: str, x: float, y: float, z: float
+    ) -> None:
         """Update XYZ values for a sensor type."""
         entries = self.sensor_entries[sensor_type]
-        entries['x'].set_value(x)
-        entries['y'].set_value(y)
-        entries['z'].set_value(z)
+        entries["x"].set_value(x)
+        entries["y"].set_value(y)
+        entries["z"].set_value(z)
 
     def set_button_states(self, enabled: bool) -> None:
         """Enable/disable buttons."""
@@ -181,10 +201,17 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
     def clear_values(self) -> None:
         """Clear all displayed values."""
         for sensor_type in self.SENSOR_CONFIGS:
-            if sensor_type == 'euler':
-                self.update_euler(self.DEFAULT_VALUE, self.DEFAULT_VALUE, self.DEFAULT_VALUE)
+            if sensor_type == "euler":
+                self.update_euler(
+                    self.DEFAULT_VALUE, self.DEFAULT_VALUE, self.DEFAULT_VALUE
+                )
             else:
-                self._update_xyz_values(sensor_type, self.DEFAULT_VALUE, self.DEFAULT_VALUE, self.DEFAULT_VALUE)
+                self._update_xyz_values(
+                    sensor_type,
+                    self.DEFAULT_VALUE,
+                    self.DEFAULT_VALUE,
+                    self.DEFAULT_VALUE,
+                )
         self.update_calib_status("--")
 
     def _handle_config_click(self) -> None:
@@ -200,7 +227,7 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
         """Handle configuration dialog apply button click"""
         # Will be implemented when config handling is moved from presenter
         dialog.destroy()
-        
+
     def _on_calibrate(self):
         """Base method for calibration button click. Override in subclasses."""
         pass
