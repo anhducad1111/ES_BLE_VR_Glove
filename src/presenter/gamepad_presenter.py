@@ -1,11 +1,12 @@
-from src.model.gamepad import JoystickData, ButtonsData
+from src.model.gamepad import ButtonsData, JoystickData
+
 
 class GamepadPresenter:
     """Presenter for handling gamepad data"""
-    
+
     def __init__(self, view, ble_service, loop):
         """Initialize gamepad presenter
-        
+
         Args:
             view: Reference to the gamepad view
             ble_service: Reference to the BLE service
@@ -17,15 +18,19 @@ class GamepadPresenter:
         self.view.loop = loop  # Set event loop for async operations
         self._current_joystick_data = None
         self._current_buttons_data = None
-        
+
         # Initially disable buttons until connection is established
         self.view.set_button_states(False)
 
     async def start_notifications(self):
         """Start gamepad notifications"""
         if self.service:
-            joystick_success = await self.service.start_joystick_notify(self._handle_joystick_update)
-            buttons_success = await self.service.start_buttons_notify(self._handle_buttons_update)
+            joystick_success = await self.service.start_joystick_notify(
+                self._handle_joystick_update
+            )
+            buttons_success = await self.service.start_buttons_notify(
+                self._handle_buttons_update
+            )
             if joystick_success and buttons_success:
                 self.view.set_button_states(True)
                 return True
@@ -41,7 +46,7 @@ class GamepadPresenter:
 
     async def _handle_joystick_update(self, sender, joystick_data):
         """Handle joystick data updates
-        
+
         Args:
             sender: The characteristic that sent the notification
             joystick_data: JoystickData object containing joystick data
@@ -55,7 +60,7 @@ class GamepadPresenter:
 
     async def _handle_buttons_update(self, sender, buttons_data):
         """Handle buttons data updates
-        
+
         Args:
             sender: The characteristic that sent the notification
             buttons_data: ButtonsData object containing buttons data

@@ -1,27 +1,31 @@
-import customtkinter as ctk
 import asyncio
 from dataclasses import dataclass
 from typing import Optional
-from src.config.app_config import AppConfig
 
+import customtkinter as ctk
+
+from src.config.app_config import AppConfig
 from src.view.view_layout import (
     DeviceMonitorView,
+    FooterComponent,
     GamepadView,
-    OverallStatusView,
     IMU1View,
     IMU2View,
+    OverallStatusView,
     SensorView,
-    FooterComponent
 )
+
 
 @dataclass
 class ViewConfig:
     """Configuration for view layout"""
+
     left_column_weight: int = 1
     right_column_weight: int = 2
     imu_padding: int = 10
     content_padding: int = 10
     top_margin: int = 20
+
 
 class MainView:
     """Main application window that manages all UI components"""
@@ -30,7 +34,7 @@ class MainView:
         self.window = root_window
         self.config = AppConfig()
         self.view_config = ViewConfig()
-        
+
         self._init_variables()
         self._setup_window()
         self._setup_theme()
@@ -77,7 +81,9 @@ class MainView:
     def _create_content_frame(self) -> ctk.CTkFrame:
         """Create main content frame"""
         content_frame = ctk.CTkFrame(self.device_monitor, fg_color="transparent")
-        content_frame.pack(fill="both", expand=True, pady=(self.view_config.top_margin, 0))
+        content_frame.pack(
+            fill="both", expand=True, pady=(self.view_config.top_margin, 0)
+        )
         return content_frame
 
     def _setup_content_grid(self, frame: ctk.CTkFrame) -> None:
@@ -114,11 +120,11 @@ class MainView:
         """Create container for right section"""
         container = ctk.CTkFrame(parent, fg_color="transparent")
         container.grid(
-            row=0, 
-            column=1, 
-            rowspan=3, 
-            sticky="nsew", 
-            padx=(self.view_config.content_padding, 0)
+            row=0,
+            column=1,
+            rowspan=3,
+            sticky="nsew",
+            padx=(self.view_config.content_padding, 0),
         )
         self._configure_right_container(container)
         return container
@@ -134,11 +140,11 @@ class MainView:
         """Create overall status view"""
         self.overall_status_view = OverallStatusView(container)
         self.overall_status_view.grid(
-            row=0, 
-            column=0, 
-            sticky="nsew", 
-            padx=(self.view_config.content_padding, 0), 
-            pady=(0, self.view_config.content_padding)
+            row=0,
+            column=0,
+            sticky="nsew",
+            padx=(self.view_config.content_padding, 0),
+            pady=(0, self.view_config.content_padding),
         )
 
     def _create_imu_section(self, container: ctk.CTkFrame) -> None:
@@ -150,11 +156,11 @@ class MainView:
         """Create frame for IMU views"""
         frame = ctk.CTkFrame(parent, fg_color="transparent")
         frame.grid(
-            row=1, 
-            column=0, 
-            sticky="nsew", 
-            padx=(self.view_config.content_padding, 0), 
-            pady=self.view_config.content_padding
+            row=1,
+            column=0,
+            sticky="nsew",
+            padx=(self.view_config.content_padding, 0),
+            pady=self.view_config.content_padding,
         )
         self._configure_imu_frame(frame)
         return frame
@@ -170,29 +176,23 @@ class MainView:
         """Create both IMU views"""
         self.imu1_view = IMU1View(frame)
         self.imu1_view.grid(
-            row=0, 
-            column=0, 
-            sticky="nsew", 
-            padx=(0, self.view_config.imu_padding)
+            row=0, column=0, sticky="nsew", padx=(0, self.view_config.imu_padding)
         )
 
         self.imu2_view = IMU2View(frame)
         self.imu2_view.grid(
-            row=0, 
-            column=1, 
-            sticky="nsew", 
-            padx=(self.view_config.imu_padding, 0)
+            row=0, column=1, sticky="nsew", padx=(self.view_config.imu_padding, 0)
         )
 
     def _create_sensor_view(self, container: ctk.CTkFrame) -> None:
         """Create sensor view"""
         self.sensor_view = SensorView(container)
         self.sensor_view.grid(
-            row=2, 
-            column=0, 
-            sticky="nsew", 
-            padx=(self.view_config.content_padding, 0), 
-            pady=self.view_config.content_padding
+            row=2,
+            column=0,
+            sticky="nsew",
+            padx=(self.view_config.content_padding, 0),
+            pady=self.view_config.content_padding,
         )
 
     def _create_footer(self) -> None:
