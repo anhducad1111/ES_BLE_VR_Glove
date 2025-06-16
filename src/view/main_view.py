@@ -89,7 +89,7 @@ class MainView:
             padx=self.config.WINDOW_PADDING,
             pady=(self.config.WINDOW_PADDING, 0),
         )
-        container.grid_columnconfigure(0, weight=5)
+        container.grid_columnconfigure(0, weight=4)
         container.grid_columnconfigure(1, weight=1)
 
         # Create device monitor and log view
@@ -97,7 +97,7 @@ class MainView:
         self.device_monitor.grid(row=0, column=0, sticky="nsew")
         
         self.log_view = LogView(container)
-        self.log_view.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
+        self.log_view.grid(row=0, column=1, sticky="nsew", padx=(20, 0))
 
     def _create_content_frame(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
         """Create main content frame"""
