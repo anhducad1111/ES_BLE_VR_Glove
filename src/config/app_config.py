@@ -29,6 +29,7 @@ class AppConfig:
         self.WINDOW_HEIGHT = 900
         self.WINDOW_MAXIMIZED = True
         self.WINDOW_PADDING = 24
+        self.WINDOW_ICON = "assets/logo.ico"
 
         # Info Panel dimensions
         self.INFO_PANEL_WIDTH = 1636
