@@ -2,12 +2,9 @@ import asyncio
 
 import customtkinter as ctk
 from bleak import BleakScanner
-from customtkinter import filedialog
-from PIL import Image
 
 from src.config.app_config import AppConfig
-from src.util.log_manager import LogManager
-from src.view.view_component import ButtonComponent, CoordinateEntry
+from src.view.view_component import ButtonComponent
 from src.view.view_dialog import ConnectionDialog
 from src.view.view_interfaces import ConnectionViewInterface
 
@@ -30,9 +27,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         # UI Components
         self.info_frame = None
         self.device_button = None
-        self.path_entry = None
         self.value_labels = {}
-        self.log_manager = LogManager.instance()
 
         # Connection State
         self.is_connected = False
@@ -169,40 +164,12 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             button_container, "Add device", command=self._handle_device_button
         )
         self.device_button.grid(
-            row=2,
-            column=1,
+            row=0,
+            column=0,
             pady=(8, 8),
             padx=12,
             sticky="e",
         )
-
-        # Path container
-        path_container = ctk.CTkFrame(button_container, fg_color="transparent")
-        path_container.grid(row=1, column=1, pady=(0, 8), padx=12, sticky="e")
-
-        # Configure grid in path_container
-        path_container.grid_columnconfigure(0, weight=0)  # For folder icon
-        path_container.grid_columnconfigure(1, weight=0)  # For entry field
-
-        # Create folder icon
-        icon = Image.open("assets/folder.png")
-        folder_image = ctk.CTkImage(light_image=icon, dark_image=icon, size=(20, 20))
-
-        # Create clickable icon label
-        folder_label = ctk.CTkLabel(
-            path_container, text="", image=folder_image, cursor="hand2"
-        )
-        folder_label.grid(row=0, column=0, padx=(0, 10), sticky="w")
-        folder_label.bind("<Button-1>", lambda e: self._on_choose_folder())
-
-        # Path entry field
-        self.path_entry = CoordinateEntry(path_container, "", entry_width=200)
-        self.path_entry.grid(row=0, column=1, sticky="e")
-
-        # Set path from LogManager
-        self.path_entry.entry.delete(0, "end")
-        self.path_entry.entry.insert(0, self.log_manager.get_selected_folder())
-        self.path_entry.entry.configure(state="readonly", cursor="arrow")
 
     def _create_info_fields(self):
         """Create the information fields grid"""
@@ -404,35 +371,6 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         """Update charging state display"""
         # Use after to update UI from any thread
         self.after(0, lambda: self.update_value("charging", state))
-
-    def _on_choose_folder(self):
-        """Handle choose folder button click"""
-        if not self._is_any_logger_active():
-            # Tạm thời enable entry để có thể thay đổi nội dung
-            self.path_entry.entry.configure(state="normal")
-
-            folder = filedialog.askdirectory(
-                initialdir=self.log_manager.get_selected_folder()
-            )
-            if folder:
-                self.path_entry.entry.delete(0, "end")
-                self.path_entry.entry.insert(0, folder)
-                self.log_manager.setup_logging_folder(folder)
-
-            # Set lại readonly sau khi đã thay đổi
-            self.path_entry.entry.configure(state="readonly", cursor="arrow")
-
-    def _is_any_logger_active(self):
-        """Check if any logger is currently active"""
-        return (
-            self.log_manager.get_imu1_logger().is_logging
-            or self.log_manager.get_imu2_logger().is_logging
-            or self.log_manager.get_sensor_logger().is_logging
-        )
-
-    def set_path_entry_state(self, state):
-        """Enable/disable path entry based on logging state"""
-        self.path_entry.entry.configure(state=state)
 
     def destroy(self):
         """Clean up resources before destroying widget"""

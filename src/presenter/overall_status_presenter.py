@@ -30,8 +30,6 @@ class OverallStatusPresenter:
 
         self.log_manager = LogManager.instance()
 
-        # Set presenter reference in view
-        self.view.set_presenter(self)
 
     async def start_notifications(self):
         """Start overall status notifications with retry logic"""

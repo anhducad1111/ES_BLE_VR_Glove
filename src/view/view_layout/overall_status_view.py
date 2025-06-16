@@ -40,7 +40,6 @@ class OverallStatusView(ctk.CTkFrame):
         self._init_variables()
         self._setup_layout()
         self._init_components()
-        self._setup_callbacks()
 
     def _init_variables(self) -> None:
         """Initialize instance variables"""
@@ -59,9 +58,6 @@ class OverallStatusView(ctk.CTkFrame):
         self._create_status_container()
         self.update_status(False, False, False)
 
-    def _setup_callbacks(self) -> None:
-        """Set up callback functions"""
-        self.log_manager.add_folder_change_callback(self._on_folder_change)
 
     def _create_header(self) -> None:
         """Create the header section"""
@@ -78,7 +74,6 @@ class OverallStatusView(ctk.CTkFrame):
         container = self._create_status_frame()
         self._configure_status_grid(container)
         self._create_status_indicators(container)
-        self._create_log_button(container)
 
     def _create_status_frame(self) -> ctk.CTkFrame:
         """Create the status container frame"""
@@ -149,93 +144,7 @@ class OverallStatusView(ctk.CTkFrame):
             text_color=self.config.BUTTON_COLOR if is_running else "red",
         )
 
-    def _create_log_button(self, parent: ctk.CTkFrame) -> None:
-        """Create and configure the log button"""
-        self.log_button = ButtonComponent(parent, "Start Log", command=self._on_log)
-        self.log_button.grid(row=0, column=6, columnspan=2, padx=3, sticky="e")
-        self.log_button.configure(state="disabled")
-
-    def _handle_logging_state(self, start: bool) -> None:
-        """Handle logging state changes"""
-        try:
-            if start:
-                if self.presenter.start_all_logging():
-                    self._update_button_for_logging()
-            else:
-                self.presenter.stop_all_logging()
-                self._update_button_for_stopped()
-        except Exception as e:
-            print(f"Error {'starting' if start else 'stopping'} logging: {e}")
-            if start:
-                self._stop_logging()
-
-    def _update_button_for_logging(self) -> None:
-        """Update button appearance for logging state"""
-        self.log_button.configure(
-            text="Stop Log", fg_color="darkred", hover_color="#8B0000"
-        )
-
-    def _update_button_for_stopped(self) -> None:
-        """Update button appearance for stopped state"""
-        self.selected_folder = None
-        self.log_button.configure(
-            text="Start Log",
-            fg_color=self.config.BUTTON_COLOR,
-            hover_color=self.config.BUTTON_HOVER_COLOR,
-        )
-
-    def _on_log(self) -> None:
-        """Handle log button clicks"""
-        if not self.presenter:
-            return
-
-        if self.log_manager.get_imu1_logger().is_logging:
-            self._stop_logging()
-        else:
-            self.selected_folder = self.log_manager.get_selected_folder()
-            self._start_logging()
-
-    def _start_logging(self) -> None:
-        """Start the logging process"""
-        self._handle_logging_state(True)
-
-    def _stop_logging(self) -> None:
-        """Stop the logging process"""
-        self._handle_logging_state(False)
-
     # Public interface methods
-    def set_presenter(self, presenter) -> None:
-        """Set the presenter reference"""
-        self.presenter = presenter
-
     def clear_values(self) -> None:
-        """Reset all status indicators and logging state"""
+        """Reset all status indicators"""
         self.update_status(False, False, False)
-        if self.log_manager.get_imu1_logger().is_logging:
-            self._stop_logging()
-        self._update_button_for_stopped()
-        self.set_button_states(False)
-
-    def set_button_states(self, enabled: bool) -> None:
-        """Enable or disable interactive elements"""
-        self.log_button.configure(state="normal" if enabled else "disabled")
-
-    def show_log_button(self, show: bool) -> None:
-        """Show or hide the log button"""
-        if show:
-            self.log_button.grid()
-        else:
-            self.log_button.grid_remove()
-
-    def _on_folder_change(self, folder: str) -> None:
-        """Handle folder selection changes"""
-        self.selected_folder = folder
-        self.log_button.configure(text="Start Log")
-
-    def destroy(self) -> None:
-        """Clean up resources before destruction"""
-        if hasattr(self, "log_manager"):
-            self.log_manager.remove_folder_change_callback(self._on_folder_change)
-            if self.log_manager.get_imu1_logger().is_logging:
-                self._stop_logging()
-        super().destroy()
