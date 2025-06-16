@@ -23,7 +23,8 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             padx=self.config.WINDOW_PADDING,
             pady=self.config.WINDOW_PADDING,
         )
-
+        
+        # self.pack_propagate(False)
         # UI Components
         self.info_frame = None
         self.device_button = None
