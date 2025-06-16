@@ -11,7 +11,8 @@ from src.presenter import (
     OverallStatusPresenter,
     ProfilePresenter,
     SensorPresenter,
-    TimestampPresenter
+    TimestampPresenter,
+    LogPresenter
 )
 
 class App:
@@ -98,13 +99,18 @@ class App:
                 self.main_view.gamepad_view,
                 self.ble_service,
                 self.loop
+            ),
+            'overall_status': OverallStatusPresenter(
+                self.main_view.overall_status_view,
+                self.ble_service,
             )
         }
         
         # Create overall status presenter after other presenters
-        presenters['overall_status'] = OverallStatusPresenter(
-            self.main_view.overall_status_view,
+        presenters['log'] = LogPresenter(
+            self.main_view.log_view,
             self.ble_service,
+            self.loop,
             presenters['imu1'],
             presenters['imu2'],
             presenters['sensor']

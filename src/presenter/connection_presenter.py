@@ -86,6 +86,7 @@ class ConnectionPresenter:
         """Start services and update views after OK is clicked"""
 
         device_manager = DeviceManager()
+        self.view.update_connection_status(True, profile, message)
         result = await device_manager.start_device_services()
 
         if not result:
@@ -94,7 +95,6 @@ class ConnectionPresenter:
             await self.disconnect()
             return False
 
-        self.view.update_connection_status(True, profile, message)
         self.view.start_heartbeat()
 
         return True

@@ -27,7 +27,7 @@ class LogView(ctk.CTkFrame):
         self.log_button = None
         self.selected_folder = None
         self.presenter = None
-
+        # self.set_button_states(True)
         # Initialize UI
         self._create_layout()
         self._setup_callbacks()
