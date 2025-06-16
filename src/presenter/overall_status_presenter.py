@@ -7,28 +7,18 @@ class OverallStatusPresenter:
     """Presenter class for handling overall status updates"""
 
     def __init__(
-        self, view, esp32_service, imu1_presenter, imu2_presenter, sensor_presenter
+        self, view, esp32_service
     ):
         """Initialize the presenter
 
         Args:
             view: Reference to the overall status view
             esp32_service: Reference to the ESP32 BLE service
-            imu1_presenter: Reference to IMU1 presenter
-            imu2_presenter: Reference to IMU2 presenter
-            sensor_presenter: Reference to sensor presenter
         """
         self.view = view
         self.esp32_service = esp32_service
-        self.imu1_presenter = imu1_presenter
-        self.imu2_presenter = imu2_presenter
-        self.sensor_presenter = sensor_presenter
         self._current_status = None
 
-        # Get LogManager instance
-        from src.util.log_manager import LogManager
-
-        self.log_manager = LogManager.instance()
 
 
     async def start_notifications(self):
@@ -69,20 +59,3 @@ class OverallStatusPresenter:
                 status_data.imu1 == OverallStatus.RUNNING,
                 status_data.imu2 == OverallStatus.RUNNING,
             )
-
-    def start_all_logging(self):
-        """Start logging for all components"""
-        if self.log_manager.start_all_logging():
-            # Set loggers in presenters
-            self.imu1_presenter.set_logger(self.log_manager.get_imu1_logger())
-            self.imu2_presenter.set_logger(self.log_manager.get_imu2_logger())
-            self.sensor_presenter.set_logger(self.log_manager.get_sensor_logger())
-            return True
-        return False
-
-    def stop_all_logging(self):
-        """Stop logging for all components"""
-        self.imu1_presenter.set_logger(None)
-        self.imu2_presenter.set_logger(None)
-        self.sensor_presenter.set_logger(None)
-        self.log_manager.stop_all_logging()

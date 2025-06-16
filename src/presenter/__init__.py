@@ -5,6 +5,7 @@ from src.presenter.overall_status_presenter import OverallStatusPresenter
 from src.presenter.profile_presenter import ProfilePresenter
 from src.presenter.sensor_presenter import SensorPresenter
 from src.presenter.timestamp_presenter import TimestampPresenter
+from src.presenter.log_presenter import LogPresenter
 
 __all__ = [
     "ConnectionPresenter",
@@ -14,4 +15,5 @@ __all__ = [
     "ProfilePresenter",
     "SensorPresenter",
     "TimestampPresenter",
+    "LogPresenter",
 ]
