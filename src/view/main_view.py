@@ -11,6 +11,7 @@ from src.view.view_layout import (
     GamepadView,
     IMU1View,
     IMU2View,
+    LogView,
     OverallStatusView,
     SensorView,
 )
@@ -48,6 +49,7 @@ class MainView:
         self.imu1_view: Optional[IMU1View] = None
         self.imu2_view: Optional[IMU2View] = None
         self.sensor_view: Optional[SensorView] = None
+        self.log_view: Optional[LogView] = None
         self.footer: Optional[FooterComponent] = None
         self.loop = asyncio.get_event_loop()
 
@@ -67,22 +69,43 @@ class MainView:
 
     def _create_layout(self) -> None:
         """Create main application layout"""
-        self._create_device_monitor()
-        content_frame = self._create_content_frame()
+        self._create_top_container()
+        
+        # Create main content area
+        main_content = ctk.CTkFrame(self.window, fg_color="transparent")
+        main_content.pack(fill="both", expand=True)
+        
+        content_frame = self._create_content_frame(main_content)
         self._setup_content_grid(content_frame)
         self._create_left_section(content_frame)
         self._create_right_section(content_frame)
         self._create_footer()
 
-    def _create_device_monitor(self) -> None:
-        """Create device monitor view"""
-        self.device_monitor = DeviceMonitorView(self.window)
+    def _create_top_container(self) -> None:
+        """Create top container with device monitor and log view in 5:1 ratio"""
+        container = ctk.CTkFrame(self.window, fg_color="transparent")
+        container.pack(
+            fill="x",
+            padx=self.config.WINDOW_PADDING,
+            pady=(self.config.WINDOW_PADDING, 0),
+        )
+        container.grid_columnconfigure(0, weight=5)
+        container.grid_columnconfigure(1, weight=1)
 
-    def _create_content_frame(self) -> ctk.CTkFrame:
+        # Create device monitor and log view
+        self.device_monitor = DeviceMonitorView(container)
+        self.device_monitor.grid(row=0, column=0, sticky="nsew")
+        
+        self.log_view = LogView(container)
+        self.log_view.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
+
+    def _create_content_frame(self, parent: ctk.CTkFrame) -> ctk.CTkFrame:
         """Create main content frame"""
-        content_frame = ctk.CTkFrame(self.device_monitor, fg_color="transparent")
+        content_frame = ctk.CTkFrame(parent, fg_color="transparent")
         content_frame.pack(
-            fill="both", expand=True, pady=(self.view_config.top_margin, 0)
+            fill="both", expand=True,
+            padx=self.config.WINDOW_PADDING,
+            pady=(self.view_config.top_margin, self.config.WINDOW_PADDING)
         )
         return content_frame
 
@@ -199,4 +222,5 @@ class MainView:
         """Create footer component"""
         self.footer = FooterComponent(self.window)
         self.footer.loop = self.loop
-        self.footer.pack(side="bottom", fill="x")
+        self.footer.pack(side="bottom", fill="x", expand=False)
+
