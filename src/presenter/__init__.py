@@ -13,5 +13,5 @@ __all__ = [
     "OverallStatusPresenter",
     "ProfilePresenter",
     "SensorPresenter",
-    "TimestampPresenter"
+    "TimestampPresenter",
 ]

@@ -1,5 +1,7 @@
 import customtkinter as ctk
+
 from src.config.app_config import AppConfig
+
 
 class CoordinateEntry(ctk.CTkFrame):
     def __init__(self, parent, label_text, entry_width=120):
@@ -8,7 +10,7 @@ class CoordinateEntry(ctk.CTkFrame):
             fg_color="transparent",
             # width=300  # Set fixed width for the frame
         )
-        
+
         self.config = AppConfig()  # Get singleton instance
 
         # Create label
@@ -17,7 +19,7 @@ class CoordinateEntry(ctk.CTkFrame):
             text=label_text,
             font=self.config.LABEL_FONT,
             text_color=self.config.TEXT_COLOR,
-            fg_color="transparent"
+            fg_color="transparent",
         )
         self.label.grid(row=0, column=0, sticky="nw", padx=(0, 10))
 

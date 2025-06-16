@@ -1,9 +1,7 @@
-from src.view.view_layout.base_imu_view import BaseIMUView
-from src.view.view_dialog import (
-    IMUConfigDialog,
-    IMUCalibrationDialog
-)
 from src.util.imu_config import IMUConfigUtil
+from src.view.view_dialog import IMUCalibrationDialog, IMUConfigDialog
+from src.view.view_layout.base_imu_view import BaseIMUView
+
 
 class IMU2View(BaseIMUView):
     def __init__(self, parent):
@@ -14,15 +12,19 @@ class IMU2View(BaseIMUView):
         # Read current config
         data = await self.imu_service.read_config()
         dialog = IMUConfigDialog(self, "IMU2")
-        
+
         if data:
             # Set dialog values from config using utility
             # Set dialog values from config using utility
             config = IMUConfigUtil.get_config_from_bytes(data, 2)
             dialog.set_config_values(config)
-            
+
         dialog.set_cancel_callback(dialog.destroy)
-        dialog.set_apply_callback(lambda config: self.loop.create_task(self._handle_config_apply(dialog, config)))
+        dialog.set_apply_callback(
+            lambda config: self.loop.create_task(
+                self._handle_config_apply(dialog, config)
+            )
+        )
 
     async def _handle_config_apply(self, dialog, config):
         """Handle IMU2 configuration dialog apply button click"""
@@ -32,7 +34,7 @@ class IMU2View(BaseIMUView):
             # Update config bytes using utility
             new_config = IMUConfigUtil.update_config_bytes(data, 2, config)
 
-            # Write updated config 
+            # Write updated config
             await self.imu_service.write_config(new_config)
 
         # Destroy dialog after writing config

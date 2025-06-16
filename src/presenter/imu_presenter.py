@@ -1,8 +1,9 @@
 from src.model.imu import IMUData, IMUEulerData
 
+
 class IMUPresenter:
     """Presenter for IMU data operations"""
-    
+
     def __init__(self, view, ble_service, characteristic_uuid, loop):
         self.view = view
         self.service = ble_service
@@ -18,19 +19,19 @@ class IMUPresenter:
         self.latest_imu_data = None
         self.latest_euler_data = None
         self.logger = None
-        
+
         # Get IMU number from UUID
         imu1_char = self.service.IMU1_CHAR_UUID
-        self.is_imu1 = (self.char_uuid == imu1_char)
-        
+        self.is_imu1 = self.char_uuid == imu1_char
+
         # Initially disable buttons until connection is established
         self.view.set_button_states(False)
-        
+
     async def read_data(self):
         """Read IMU data once"""
         if not self.service.is_connected():
             return False
-            
+
         data = await self.service.read_characteristic(self.char_uuid)
         if data:
             imu_data = IMUData.from_bytes(data)
@@ -38,30 +39,29 @@ class IMUPresenter:
                 self._update_view(imu_data)
                 return True
         return False
-        
+
     async def start_notifications(self):
         """Start notifications"""
         if not self.service.is_connected():
             self.view.set_button_states(False)
             return False
-            
+
         # First stop any existing notifications to ensure clean state
         if self.notifying:
             await self.stop_notifications()
-            
+
         result = await self.service.start_notify(
-            self.char_uuid, 
-            self._notification_handler
+            self.char_uuid, self._notification_handler
         )
-        
+
         if result:
             self.notifying = True
             self.view.set_button_states(True)
-            
+
             # Optionally start Euler notifications too
-            if hasattr(self.view, 'update_euler'):
+            if hasattr(self.view, "update_euler"):
                 await self.start_euler_notifications()
-                
+
         return result
 
     async def start_euler_notifications(self):
@@ -75,12 +75,16 @@ class IMUPresenter:
 
         # Get UUIDs from service
         imu1_char = self.service.IMU1_CHAR_UUID
-            
+
         if self.char_uuid == imu1_char:
-            result = await self.service.start_imu1_euler_notify(self._euler_notification_handler)
+            result = await self.service.start_imu1_euler_notify(
+                self._euler_notification_handler
+            )
         else:
-            result = await self.service.start_imu2_euler_notify(self._euler_notification_handler)
-            
+            result = await self.service.start_imu2_euler_notify(
+                self._euler_notification_handler
+            )
+
         if result:
             self.euler_notifying = True
         return result
@@ -90,9 +94,9 @@ class IMUPresenter:
         if not self.service.is_connected():
             self.view.set_button_states(False)
             return False
-            
+
         success = True
-            
+
         # Stop main notifications if they're active
         if self.notifying:
             result = await self.service.stop_notify(self.char_uuid)
@@ -101,7 +105,7 @@ class IMUPresenter:
                 self.view.set_button_states(False)
             else:
                 success = False
-                
+
         # Always try to stop Euler notifications to ensure clean state
         result = await self.stop_euler_notifications()
         if not result:
@@ -117,7 +121,7 @@ class IMUPresenter:
         try:
             # Get UUIDs from service
             imu1_char = self.service.IMU1_CHAR_UUID
-            
+
             if self.char_uuid == imu1_char:
                 result = await self.service.stop_imu1_euler_notify()
                 self.euler_notifying = False if result else self.euler_notifying
@@ -126,18 +130,18 @@ class IMUPresenter:
                 result = await self.service.stop_imu2_euler_notify()
                 self.euler_notifying = False if result else self.euler_notifying
                 return result
-                
+
         except Exception as e:
             print(f"Error stopping Euler notifications: {e}")
             return False
-            
+
     def set_log_dialog(self, dialog):
         """Set the IMU log dialog for data logging (deprecated - using observer pattern now)"""
         self.log_dialog = dialog
         if not dialog:
             self.latest_imu_data = None
             self.latest_euler_data = None
-            
+
     def set_logger(self, logger):
         """Set IMU logger instance"""
         self.logger = logger
@@ -160,7 +164,7 @@ class IMUPresenter:
             self.loop.create_task(self._update_euler_async(euler_data))
             # Try to log if we have both IMU and Euler data
             await self._try_log_data()
-            
+
     async def _try_log_data(self):
         """Try to log data if both IMU and Euler data are available and logger is set"""
         if self.latest_imu_data and self.latest_euler_data and self.logger:
@@ -168,37 +172,29 @@ class IMUPresenter:
 
     async def _update_euler_async(self, euler_data):
         """Update view with Euler angles and calibration status asynchronously"""
-        if hasattr(self.view, 'update_euler'):
+        if hasattr(self.view, "update_euler"):
             self.view.update_euler(
-                euler_data.euler['pitch'],
-                euler_data.euler['roll'],
-                euler_data.euler['yaw']
+                euler_data.euler["pitch"],
+                euler_data.euler["roll"],
+                euler_data.euler["yaw"],
             )
-            if hasattr(self.view, 'update_calib_status'):
+            if hasattr(self.view, "update_calib_status"):
                 self.view.update_calib_status(euler_data.calib_status)
-            
+
     async def _update_view_async(self, imu_data):
         """Update view asynchronously (safe for callbacks)"""
         self._update_view(imu_data)
-        
+
     def _update_view(self, imu_data):
         """Update view with IMU data"""
         self.view.update_accel(
-            imu_data.accel['x'], 
-            imu_data.accel['y'], 
-            imu_data.accel['z']
+            imu_data.accel["x"], imu_data.accel["y"], imu_data.accel["z"]
         )
         self.view.update_gyro(
-            imu_data.gyro['x'], 
-            imu_data.gyro['y'], 
-            imu_data.gyro['z']
+            imu_data.gyro["x"], imu_data.gyro["y"], imu_data.gyro["z"]
         )
-        self.view.update_magn(
-            imu_data.mag['x'], 
-            imu_data.mag['y'], 
-            imu_data.mag['z']
-        )
-        
+        self.view.update_magn(imu_data.mag["x"], imu_data.mag["y"], imu_data.mag["z"])
+
     def is_notifying(self):
         """Check if notifications are active"""
         return self.notifying

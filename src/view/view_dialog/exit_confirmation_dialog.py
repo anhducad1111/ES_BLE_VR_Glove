@@ -1,22 +1,28 @@
-import customtkinter as ctk
 from dataclasses import dataclass
-from typing import Optional, Callable, Protocol
+from typing import Callable, Optional, Protocol
+
+import customtkinter as ctk
+
 from src.config.app_config import AppConfig
 from src.view.view_component.button_component import ButtonComponent
+
 from .base_dialog import BaseDialog, DialogConfig, DialogStyle
+
 
 class YesCallback(Protocol):
     """Protocol for yes button callback"""
+
     def __call__(self) -> None: ...
+
 
 class ExitConfirmationDialog(BaseDialog):
     def __init__(self, parent: ctk.CTk):
         # Check if parent App has active connection - fixed check
         self.has_device = False
-        if hasattr(parent, 'ble_service'):
-            if callable(getattr(parent.ble_service, 'is_connected', None)):
+        if hasattr(parent, "ble_service"):
+            if callable(getattr(parent.ble_service, "is_connected", None)):
                 self.has_device = parent.ble_service.is_connected()
-        
+
         self._destroyed = False
         self.loop = None  # Will be set by caller
         self.on_yes: Optional[YesCallback] = None
@@ -30,11 +36,11 @@ class ExitConfirmationDialog(BaseDialog):
                 content_bg=AppConfig().BACKGROUND_COLOR,
                 border_color="#777777",
                 border_width=1,
-                corner_radius=8
-            )
+                corner_radius=8,
+            ),
         )
         super().__init__(parent, config)
-        
+
         # Match original window setup
         self.title("Exit Application")
         self.attributes("-topmost", True)
@@ -46,7 +52,7 @@ class ExitConfirmationDialog(BaseDialog):
             self.content_frame,
             text="Exit Application",
             font=("Inter Bold", 16),
-            text_color="white"
+            text_color="white",
         )
         title.pack(pady=(0, 20))
 
@@ -86,7 +92,7 @@ class ExitConfirmationDialog(BaseDialog):
             width=120,
             fg_color="transparent",
             hover_color="gray20",
-            cursor="hand2"
+            cursor="hand2",
         )
         self.cancel_btn.pack(side="left", padx=10)
 
@@ -98,10 +104,10 @@ class ExitConfirmationDialog(BaseDialog):
             width=120,
             fg_color="#0078D4",
             hover_color="#006CBE",
-            cursor="hand2"
+            cursor="hand2",
         )
         self.yes_btn.pack(side="left", padx=10)
-        
+
         # Make dialog focusable for keyboard events
         self.focus_set()
 

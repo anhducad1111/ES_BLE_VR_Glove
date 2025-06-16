@@ -59,6 +59,7 @@ venv.bak/
 *.njsproj
 *.sln
 *.sw?
+.pytest_cache
 
 # Config files containing sensitive data
 gatt.json
