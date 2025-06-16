@@ -68,7 +68,7 @@ class LogView(ctk.CTkFrame):
         path_frame.grid_columnconfigure(1, weight=0)
 
         # Create path entry
-        self.path_entry = CoordinateEntry(path_frame, "", entry_width=260)
+        self.path_entry = CoordinateEntry(path_frame, "", entry_width=220)
         self.path_entry.grid(row=0, column=0, sticky="ew")
 
         # Set initial path
@@ -82,7 +82,7 @@ class LogView(ctk.CTkFrame):
         folder_label = ctk.CTkLabel(
             path_frame, text="", image=folder_image, cursor="hand2"
         )
-        folder_label.grid(row=0, column=1, padx=(0, 10), sticky="e")
+        folder_label.grid(row=0, column=1, padx=(0, 15), sticky="e")
         folder_label.bind("<Button-1>", lambda e: self._on_choose_folder())
         
         # Create log button in its own row
