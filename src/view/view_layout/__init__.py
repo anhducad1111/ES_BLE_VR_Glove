@@ -6,6 +6,7 @@ from src.view.view_layout.imu1_view import IMU1View
 from src.view.view_layout.imu2_view import IMU2View
 from src.view.view_layout.overall_status_view import OverallStatusView
 from src.view.view_layout.sensor_view import SensorView
+from src.view.view_layout.log_view import LogView
 
 __all__ = [
     "DeviceMonitorView",
@@ -17,4 +18,5 @@ __all__ = [
     "OverallStatusView",
     "FooterComponent",
     "BaseIMUView",
+    "LogView",
 ]
