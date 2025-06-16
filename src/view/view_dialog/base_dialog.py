@@ -62,6 +62,7 @@ class BaseDialog(ctk.CTkToplevel):
         self.geometry(f"{self.config.width}x{self.config.height}")
         self.resizable(self.config.resizable, self.config.resizable)
         self.protocol("WM_DELETE_WINDOW", self.destroy)
+        self.iconbitmap(self.app_config.WINDOW_ICON)
 
         if self.config.keep_on_top:
             self.attributes("-topmost", True)

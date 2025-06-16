@@ -46,6 +46,10 @@ class App:
         ctk.set_appearance_mode(config.APPEARANCE_MODE)
         window = ctk.CTk()
         
+        # Set window title and icon
+        window.title(config.WINDOW_TITLE)
+        window.iconbitmap(config.WINDOW_ICON)
+        
         # Get screen dimensions
         screen_width = window.winfo_screenwidth()
         screen_height = window.winfo_screenheight()
