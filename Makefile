@@ -50,10 +50,15 @@ lint: setup
 release: setup
 	$(BIN)\pyinstaller --onefile --noconsole \
 		--name ES_BLE_VR_Glove \
+		--icon assets/logo.ico \
 		--add-data "assets;assets" \
+		--add-data "MotionCal.exe;." \
+		--add-data "gatt.json;." \
 		main.py
-	copy MotionCal.exe dist\
-	copy gatt.json dist\
-	xcopy /E /I assets dist\assets
+	if not exist dist mkdir dist
+	copy /Y MotionCal.exe "dist\"
+	copy /Y gatt.json "dist\"
+	if not exist "dist\assets" mkdir "dist\assets"
+	xcopy /Y /E /I assets "dist\assets"
 
 .DEFAULT_GOAL := all
