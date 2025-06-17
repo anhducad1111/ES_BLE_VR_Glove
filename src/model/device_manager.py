@@ -40,7 +40,7 @@ class DeviceManager:
             if name not in self.presenters:
                 raise KeyError(f"Missing required presenter: {name}")
 
-    async def _start_service_with_retry(self, service_name, max_retries=5, delay=0.2):
+    async def _start_service_with_retry(self, service_name, max_retries=10, delay=0.1):
         """Start a service with retry logic and delay
 
         Args:

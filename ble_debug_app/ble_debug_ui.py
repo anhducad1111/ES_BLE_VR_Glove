@@ -4,21 +4,38 @@ from bleak import BleakScanner
 from src.config.app_config import AppConfig
 from src.view.view_dialog.connection_dialog import ConnectionDialog
 from src.model.ble_service import BLEDeviceInfo
-from .ble_debug_service import BLEDebugService
+from .ble_service import BLEService
 
 class BLEDebugView(ctk.CTkFrame):
     """Debug view for BLE data"""
     
-    def __init__(self, parent):
+    def __init__(self, parent, ble_service: BLEService):
         super().__init__(parent)
         
+        # Store BLE service
+        self.ble_service = ble_service
+        
         # Initialize config
-        self.config = AppConfig()  # Get singleton instance
+        self.config = AppConfig()
         
         # Create main layout
+        self._init_ui()
+        
+    def _init_ui(self):
+        """Initialize UI components"""
         self.grid_columnconfigure(0, weight=1)
         
         # Test operations section
+        self._init_test_section()
+        
+        # Services section  
+        self._init_services_section()
+        
+        # Create info sections
+        self._init_info_section()
+        
+    def _init_test_section(self):
+        """Initialize test operations section"""
         test_frame = ctk.CTkFrame(self)
         test_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=5)
         
@@ -40,10 +57,7 @@ class BLEDebugView(ctk.CTkFrame):
         )
         uuid_label.pack(side="left", padx=(5,10))
         
-        self.uuid_entry = ctk.CTkEntry(
-            uuid_frame,
-            width=300
-        )
+        self.uuid_entry = ctk.CTkEntry(uuid_frame, width=300)
         self.uuid_entry.pack(side="left", fill="x", expand=True)
         
         # Operation buttons
@@ -61,7 +75,7 @@ class BLEDebugView(ctk.CTkFrame):
         self.notify_button = ctk.CTkButton(
             button_frame,
             text="Start Notify",
-            width=100,
+            width=100, 
             command=self._on_notify_clicked
         )
         self.notify_button.pack(side="left", padx=5)
@@ -76,7 +90,8 @@ class BLEDebugView(ctk.CTkFrame):
         
         self.notifying = False
         
-        # Services section
+    def _init_services_section(self):
+        """Initialize services section"""
         services_frame = ctk.CTkFrame(self)
         services_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
         
@@ -94,9 +109,32 @@ class BLEDebugView(ctk.CTkFrame):
         )
         self.services_text.pack(fill="x", padx=5, pady=5)
         
-        # Raw data section
-        raw_frame = ctk.CTkFrame(self)
-        raw_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=5)
+    def _init_info_section(self):
+        """Initialize info section with raw and parsed data"""
+        info_container = ctk.CTkFrame(self)
+        info_container.grid(row=2, column=0, sticky="nsew", padx=10, pady=5)
+        info_container.grid_columnconfigure(0, weight=1)
+        info_container.grid_columnconfigure(1, weight=1)
+
+        # Left column - Raw & Device Info
+        left_column = ctk.CTkFrame(info_container, fg_color="transparent")
+        left_column.grid(row=0, column=0, sticky="nsew", padx=5)
+        left_column.grid_columnconfigure(0, weight=1)
+
+        self._init_raw_data_panel(left_column)
+        self._init_device_info_panel(left_column)
+
+        # Right column - Parsed Data
+        right_column = ctk.CTkFrame(info_container, fg_color="transparent")
+        right_column.grid(row=0, column=1, sticky="nsew", padx=5)
+        right_column.grid_columnconfigure(0, weight=1)
+        
+        self._init_parsed_data_panel(right_column)
+        
+    def _init_raw_data_panel(self, parent):
+        """Initialize raw data panel"""
+        raw_frame = ctk.CTkFrame(parent)
+        raw_frame.grid(row=0, column=0, sticky="nsew", pady=(0,5))
         
         raw_label = ctk.CTkLabel(
             raw_frame,
@@ -112,9 +150,48 @@ class BLEDebugView(ctk.CTkFrame):
         )
         self.raw_text.pack(fill="x", padx=5, pady=5)
         
-        # Parsed data section
-        parsed_frame = ctk.CTkFrame(self)
-        parsed_frame.grid(row=3, column=0, sticky="nsew", padx=10, pady=5)
+    def _init_device_info_panel(self, parent):
+        """Initialize device info panel"""
+        device_frame = ctk.CTkFrame(parent)
+        device_frame.grid(row=1, column=0, sticky="nsew")
+        
+        device_label = ctk.CTkLabel(
+            device_frame,
+            text="Device Information:",
+            font=self.config.HEADER_FONT
+        )
+        device_label.pack(anchor="w", padx=5, pady=5)
+        
+        # Battery frame
+        battery_frame = ctk.CTkFrame(device_frame, fg_color="transparent")
+        battery_frame.pack(fill="x", padx=5)
+        
+        self.battery_label = ctk.CTkLabel(
+            battery_frame,
+            text="Battery: --",
+            font=self.config.TEXT_FONT
+        )
+        self.battery_label.pack(side="left", padx=5)
+        
+        self.charging_label = ctk.CTkLabel(
+            battery_frame,
+            text="Status: --",
+            font=self.config.TEXT_FONT
+        )
+        self.charging_label.pack(side="right", padx=5)
+        
+        # Device details
+        self.device_info = ctk.CTkTextbox(
+            device_frame,
+            height=80,
+            font=self.config.TEXT_FONT
+        )
+        self.device_info.pack(fill="x", padx=5, pady=5)
+        
+    def _init_parsed_data_panel(self, parent):
+        """Initialize parsed data panel"""
+        parsed_frame = ctk.CTkFrame(parent)
+        parsed_frame.grid(row=0, column=0, sticky="nsew")
         
         parsed_label = ctk.CTkLabel(
             parsed_frame,
@@ -125,11 +202,11 @@ class BLEDebugView(ctk.CTkFrame):
         
         self.parsed_text = ctk.CTkTextbox(
             parsed_frame,
-            height=100,
+            height=200,
             font=self.config.TEXT_FONT
         )
         self.parsed_text.pack(fill="x", padx=5, pady=5)
-        
+
     def update_services(self, services_data):
         """Update services display"""
         text = ""
@@ -155,9 +232,35 @@ class BLEDebugView(ctk.CTkFrame):
         
     def update_parsed_data(self, data):
         """Update parsed data display"""
+        if isinstance(data, str):
+            # Update device info if applicable
+            if any(key in data for key in ["Firmware Version:", "Hardware Version:", "Model:", "Manufacturer:"]):
+                self.device_info.insert("end", data + "\n")
+                return
+            elif "Battery Level:" in data:
+                self.battery_label.configure(text=data)
+                return
+            elif "Charging State:" in data:
+                self.charging_label.configure(text=data)
+                return
+                
+        # Update parsed text for other data
         self.parsed_text.delete("1.0", "end")
         self.parsed_text.insert("1.0", data)
         
+    def set_button_states(self, enabled):
+        """Enable/disable buttons"""
+        state = "normal" if enabled else "disabled"
+        self.read_button.configure(state=state)
+        self.write_button.configure(state=state)
+        self.notify_button.configure(state=state)
+        
+        # Reset device info when disconnecting
+        if not enabled:
+            self.battery_label.configure(text="Battery: --")
+            self.charging_label.configure(text="Status: --")
+            self.device_info.delete("1.0", "end")
+
     def _on_read_clicked(self):
         """Handle read button click"""
         if self.on_read:
@@ -192,13 +295,6 @@ class BLEDebugView(ctk.CTkFrame):
         self.on_read = on_read
         self.on_write = on_write
         self.on_notify = on_notify
-        
-    def set_button_states(self, enabled):
-        """Enable/disable buttons"""
-        state = "normal" if enabled else "disabled"
-        self.read_button.configure(state=state)
-        self.write_button.configure(state=state)
-        self.notify_button.configure(state=state)
 
 class DebugApp:
     def __init__(self):
@@ -213,24 +309,38 @@ class DebugApp:
         asyncio.set_event_loop(self.loop)
         
         # Initialize BLE service
-        self.ble_service = BLEDebugService()
+        self.ble_service = BLEService()
         
         # Create window
+        self._init_window()
+        
+        # Setup asyncio integration
+        self._setup_asyncio_integration()
+        
+    def _init_window(self):
+        """Initialize main window"""
         self.window = ctk.CTk()
         self.window.title("BLE Debug Tool")
         self.window.geometry(f"{self.config.WINDOW_WIDTH}x{self.config.WINDOW_HEIGHT}")
+        
+        # Setup grid
         self.window.grid_columnconfigure(0, weight=1)
         self.window.grid_rowconfigure(0, weight=1)
         
-        # Get screen dimensions
+        # Set window size to screen size
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
-
-        # Set window size to screen size
         self.window.geometry(f"{screen_width}x{screen_height}+0+0")
         self.window.after(0, lambda: self.window.state('zoomed'))
-
+        
         # Create main content
+        self._init_content()
+        
+        # Setup close handler
+        self.window.protocol("WM_DELETE_WINDOW", self._on_closing)
+        
+    def _init_content(self):
+        """Initialize main content"""
         self.content = ctk.CTkFrame(self.window)
         self.content.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         self.content.grid_columnconfigure(0, weight=1)
@@ -260,7 +370,7 @@ class DebugApp:
         self.connect_button.grid(row=0, column=2, padx=5)
         
         # Create debug view
-        self.debug_view = BLEDebugView(self.content)
+        self.debug_view = BLEDebugView(self.content, self.ble_service)
         self.debug_view.grid(row=1, column=0, sticky="nsew")
         
         # Set operation handlers
@@ -270,15 +380,6 @@ class DebugApp:
             on_write=lambda uuid: self.loop.create_task(self._handle_write(uuid)),
             on_notify=lambda uuid, enabled: self.loop.create_task(self._handle_notify(uuid, enabled))
         )
-        
-        # Connection dialog will be created when needed
-        self.connection_dialog = None
-        
-        # Setup asyncio integration
-        self._setup_asyncio_integration()
-        
-        # Setup window close handler
-        self.window.protocol("WM_DELETE_WINDOW", self._on_closing)
         
     def _setup_asyncio_integration(self):
         """Setup asyncio integration with Tkinter"""
@@ -309,7 +410,7 @@ class DebugApp:
             rssi=device_info["rssi"]
         )
         
-        success = await self.ble_service.connect(ble_device)
+        success = await self.ble_service.connect(ble_device.address)
         
         if success:
             # Show success and discover services
@@ -318,6 +419,31 @@ class DebugApp:
             # Get and display services
             services = await self.ble_service.discover_services()
             self.debug_view.update_services(services)
+            
+            # Read device information
+            try:
+                # Read device info characteristics
+                for char_name in ["FIRMWARE_UUID", "HARDWARE_UUID", 
+                                "MODEL_NUMBER_UUID", "MANUFACTURER_UUID"]:
+                    uuid = self.ble_service.get_characteristic_uuid(char_name)
+                    if uuid:
+                        data = await self.ble_service.read_characteristic(uuid)
+                        if data:
+                            parsed = self.ble_service.parse_data(data, uuid)
+                            self.debug_view.update_parsed_data(parsed)
+                            await asyncio.sleep(0.1)  # Small delay between reads
+                
+                # Start battery notifications
+                battery_uuid = self.ble_service.get_characteristic_uuid("BATTERY_LEVEL_UUID")
+                charging_uuid = self.ble_service.get_characteristic_uuid("BATTERY_CHARGING_UUID")
+                
+                if battery_uuid:
+                    await self.ble_service.start_notify(battery_uuid, self._notification_handler)
+                if charging_uuid:
+                    await self.ble_service.start_notify(charging_uuid, self._notification_handler)
+                    
+            except Exception as e:
+                print(f"Error reading device info: {e}")
             
             # Enable and update connect button
             self.connect_button.configure(
@@ -362,7 +488,7 @@ class DebugApp:
             data = await self.ble_service.read_characteristic(uuid)
             if data:
                 self.debug_view.update_raw_data(data)
-                parsed = self.ble_service.parse_imu_data(data)
+                parsed = self.ble_service.parse_data(data, uuid)
                 self.debug_view.update_parsed_data(parsed)
             else:
                 self.debug_view.update_raw_data(None)
@@ -408,11 +534,11 @@ class DebugApp:
         except Exception as e:
             self.debug_view.update_parsed_data(f"Error: {e}")
             
-    def _notification_handler(self, sender, data):
+    def _notification_handler(self, uuid: str, sender: any, data: bytes):
         """Handle incoming notifications"""
         def update():
             self.debug_view.update_raw_data(data)
-            parsed = self.ble_service.parse_imu_data(data)
+            parsed = self.ble_service.parse_data(data, uuid)
             self.debug_view.update_parsed_data(parsed)
             
         # Schedule UI update on main thread
