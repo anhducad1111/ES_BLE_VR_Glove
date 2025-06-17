@@ -132,6 +132,29 @@ class ESP32BLEService(BLEService):
             data = await self.read_characteristic(self.CONFIG_UUID)
             if not data or len(data) < 15:  # Must have at least 15 bytes
                 return None
+                
+            # Log IMU configurations
+            # print("\nIMU Configuration Data:")
+
+            # print("\nFrequency Settings:")
+            # print("IMU1:")
+            # print(f"- Accel & Gyro: {self.ACCEL_GYRO_FREQ_MAP[data[1]]} Hz")
+            # print(f"- Magnetometer: {self.MAG_FREQ_MAP[data[2]]} Hz")
+            # print("IMU2:")
+            # print(f"- Accel & Gyro: {self.ACCEL_GYRO_FREQ_MAP[data[3]]} Hz")
+            # print(f"- Magnetometer: {self.MAG_FREQ_MAP[data[4]]} Hz")
+
+            # print("\nRange Settings:")
+            # print("IMU1:")
+            # print(f"- Accelerometer: ±{self.ACCEL_RANGE_MAP[data[5]]} g")
+            # print(f"- Gyroscope: ±{self.GYRO_RANGE_MAP[data[6]]} dps")
+            # print(f"- Magnetometer: ±{self.MAG_RANGE_MAP[data[7]]} uT")
+            # print("IMU2:")
+            # print(f"- Accelerometer: ±{self.ACCEL_RANGE_MAP[data[8]]} g")
+            # print(f"- Gyroscope: ±{self.GYRO_RANGE_MAP[data[9]]} dps")
+            # print(f"- Magnetometer: ±{self.MAG_RANGE_MAP[data[10]]} uT")
+
+
             return data
         except Exception as e:
             print(f"Error reading config: {e}")
@@ -206,6 +229,13 @@ class ESP32BLEService(BLEService):
                 device_info.model = await self.check_model_number()
                 device_info.manufacturer = await self.check_manufacturer()
                 device_info.hardware = await self.check_hardware_revision()
+                
+                # # Log device info
+                # print("\nDevice Information:")
+                # print(f"Firmware: {device_info.firmware}")
+                # print(f"Model: {device_info.model}")
+                # print(f"Manufacturer: {device_info.manufacturer}")
+                # print(f"Hardware: {device_info.hardware}")
             except Exception as e:
                 print(f"Warning: Error reading device profiles: {e}")
                 # Continue even if profile reading fails
@@ -284,10 +314,14 @@ class ESP32BLEService(BLEService):
         try:
             # Handle battery notifications directly (non-async)
             if uuid == self.BATTERY_LEVEL_UUID:
-                callback(int(data[0]))  # Raw battery level (0-100)
+                level = int(data[0])
+                # print(f"Battery Level: {level}%")  # Log battery level
+                callback(level)  # Raw battery level (0-100)
                 return
             elif uuid == self.BATTERY_CHARGING_UUID:
-                callback("Charging" if data[0] == 1 else "Not Charging")
+                charging = data[0] == 1
+                # print(f"Charging Status: {'Charging' if charging else 'Not Charging'}")  # Log charging status
+                callback("Charging" if charging else "Not Charging")
                 return
 
             # For other notifications that need data classes
