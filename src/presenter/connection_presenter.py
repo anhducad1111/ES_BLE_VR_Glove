@@ -140,12 +140,17 @@ class ConnectionPresenter:
     async def disconnect(self):
         """Disconnect from current device"""
         try:
+            print("[ConnectionPresenter] Starting disconnect")
+            
             # Stop heartbeat monitoring before disconnecting
             self.view.stop_heartbeat()
 
             # Stop logging if active before disconnecting
             if hasattr(self.view, "_stop_logging"):
+                print("[ConnectionPresenter] Calling _stop_logging")
                 self.view._stop_logging()
+            else:
+                print("[ConnectionPresenter] No _stop_logging method found")
 
             # Get profile before disconnecting
             profile = self.get_connected_device()
@@ -153,6 +158,7 @@ class ConnectionPresenter:
                 profile.update_connection_status("Disconnecting...")
 
             # Clear all displays
+            print("[ConnectionPresenter] Calling clear_values")
             self.view.clear_values()
 
             # Disconnect from device (this will stop all notifications)

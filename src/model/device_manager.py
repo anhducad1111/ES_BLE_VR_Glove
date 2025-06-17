@@ -138,6 +138,7 @@ class DeviceManager:
             "imu2",
             "sensor",  # Sensors
             "gamepad",  # Gamepad
+            "log",    # Log manager
         ]
 
         try:

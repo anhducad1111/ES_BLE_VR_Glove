@@ -51,6 +51,7 @@ class LogView(ctk.CTkFrame):
 
         # Create path selection section
         self._create_path_section()
+        print("[LogView] View initialized")
 
     def _create_path_section(self):
         """Create path selection section"""
@@ -193,11 +194,14 @@ class LogView(ctk.CTkFrame):
        self.presenter = presenter
 
     def clear_values(self) -> None:
-       """Reset logging state"""
-       if self.log_manager.get_imu1_logger().is_logging:
-           self._stop_logging()
-       self._update_button_for_stopped()
-       self.set_button_states(False)
+        """Reset logging state"""
+        print("[LogView] clear_values called")
+        if self.log_manager.get_imu1_logger().is_logging:
+            print("[LogView] Stopping active logging")
+            self._stop_logging()
+        self._update_button_for_stopped()
+        print("[LogView] Setting button state to False")
+        self.set_button_states(False)
 
     def set_button_states(self, enabled: bool) -> None:
        """Enable or disable interactive elements"""
