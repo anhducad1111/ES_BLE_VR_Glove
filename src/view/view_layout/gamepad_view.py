@@ -58,6 +58,7 @@ class GamepadView(ctk.CTkFrame):
         # Create xy container
         self.create_xy_container()
         self.update_xy_values(0000, 0000)
+        self.update_joystick_button_state(False)
 
         # Separator
         separator = ctk.CTkFrame(
@@ -224,7 +225,8 @@ class GamepadView(ctk.CTkFrame):
             is_active: True if button is pressed, False otherwise
         """
         self.joystick_button.configure(
-            fg_color=self.config.BUTTON_COLOR if is_active else self.config.FRAME_BG
+            fg_color=self.config.BUTTON_COLOR if is_active else self.config.FRAME_BG,
+            state="normal" if is_active else "disabled"
         )
 
     def clear_values(self):

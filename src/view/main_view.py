@@ -40,6 +40,7 @@ class MainView:
         self._setup_window()
         self._setup_theme()
         self._create_layout()
+        print("[MainView] View initialized")
 
     def _init_variables(self) -> None:
         """Initialize instance variables"""
@@ -223,4 +224,34 @@ class MainView:
         self.footer = FooterComponent(self.window)
         self.footer.loop = self.loop
         self.footer.pack(side="bottom", fill="x", expand=False)
+
+    def clear_values(self) -> None:
+        """Reset all view components on disconnect"""
+        print("[MainView] clear_values called")
+        # Clear all child views
+        if self.log_view:
+            print("[MainView] Clearing LogView")
+            self.log_view.clear_values()
+        if self.device_monitor:
+            self.device_monitor.clear_values()
+        if self.gamepad_view:
+            self.gamepad_view.clear_values()
+        if self.overall_status_view:
+            self.overall_status_view.clear_values()
+        if self.imu1_view:
+            self.imu1_view.clear_values()
+        if self.imu2_view:
+            self.imu2_view.clear_values()
+        if self.sensor_view:
+            self.sensor_view.clear_values()
+
+    def _stop_logging(self) -> None:
+        """Stop logging on disconnect"""
+        print("[MainView] _stop_logging called")
+        if self.log_view:
+            print("[MainView] Delegating _stop_logging to LogView")
+            self.log_view._stop_logging()
+        else:
+            print("[MainView] LogView not found")
+
 
