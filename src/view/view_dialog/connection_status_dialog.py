@@ -98,8 +98,10 @@ class ConnectionStatusDialog(BaseDialog):
         """Show connected state with device info and start countdown"""
         if not self._destroyed:
             # Calculate connection duration if start time exists
-            if hasattr(self.parent, 'connect_start_time'):
-                duration = asyncio.get_event_loop().time() - self.parent.connect_start_time
+            if hasattr(self.parent, "connect_start_time"):
+                duration = (
+                    asyncio.get_event_loop().time() - self.parent.connect_start_time
+                )
                 # print(f"[Connection] Connection established in {duration:.2f} seconds")
 
             status = DeviceStatus(name=device_info.name, rssi=device_info.rssi)

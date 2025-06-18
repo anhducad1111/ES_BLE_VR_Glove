@@ -1,5 +1,7 @@
 """ESP32 BLE Service Implementation"""
+
 import asyncio
+
 from src.config.constant import BLEConstants as C
 from src.model.ble_service import BLEService
 from src.model.device_manager import DeviceManager
@@ -12,17 +14,39 @@ class ESP32BLEService(BLEService):
     CHARACTERISTICS = C.CHARACTERISTICS
 
     # Config maps
-    locals().update({name: getattr(C, name) for name in [
-        'ACCEL_GYRO_FREQ_MAP', 'MAG_FREQ_MAP', 'ACCEL_RANGE_MAP',
-        'GYRO_RANGE_MAP', 'MAG_RANGE_MAP', 'ACCEL_GYRO_FREQ_REV_MAP',
-        'MAG_FREQ_REV_MAP', 'ACCEL_RANGE_REV_MAP', 'GYRO_RANGE_REV_MAP',
-        'MAG_RANGE_REV_MAP'
-    ]})
+    locals().update(
+        {
+            name: getattr(C, name)
+            for name in [
+                "ACCEL_GYRO_FREQ_MAP",
+                "MAG_FREQ_MAP",
+                "ACCEL_RANGE_MAP",
+                "GYRO_RANGE_MAP",
+                "MAG_RANGE_MAP",
+                "ACCEL_GYRO_FREQ_REV_MAP",
+                "MAG_FREQ_REV_MAP",
+                "ACCEL_RANGE_REV_MAP",
+                "GYRO_RANGE_REV_MAP",
+                "MAG_RANGE_REV_MAP",
+            ]
+        }
+    )
 
     # Notification types for dynamic method generation
-    _NOTIFY_TYPES = ['imu1', 'imu2', 'imu1_euler', 'imu2_euler',
-                     'flex_sensor', 'force_sensor', 'joystick', 'buttons',
-                     'config', 'overall_status', 'battery_level', 'battery_charging']
+    _NOTIFY_TYPES = [
+        "imu1",
+        "imu2",
+        "imu1_euler",
+        "imu2_euler",
+        "flex_sensor",
+        "force_sensor",
+        "joystick",
+        "buttons",
+        "config",
+        "overall_status",
+        "battery_level",
+        "battery_charging",
+    ]
 
     def __init__(self):
         super().__init__()
@@ -44,12 +68,15 @@ class ESP32BLEService(BLEService):
                 uuid = getattr(self, uuid_attr)
 
                 # Create start method
-                def start_method(
-                    cb, u=uuid): return self._start_notify_generic(u, cb)
+                def start_method(cb, u=uuid):
+                    return self._start_notify_generic(u, cb)
+
                 setattr(self, f"start_{notify_type}_notify", start_method)
 
                 # Create stop method
-                def stop_method(u=uuid): return self._stop_notify_generic(u)
+                def stop_method(u=uuid):
+                    return self._stop_notify_generic(u)
+
                 setattr(self, f"stop_{notify_type}_notify", stop_method)
 
     def set_loop(self, loop):
@@ -58,9 +85,13 @@ class ESP32BLEService(BLEService):
 
     async def start_services(self):
         """Start all device services"""
-        
+
         device_manager = DeviceManager()
-        return await device_manager.start_services() if device_manager and hasattr(device_manager, "start_services") else False
+        return (
+            await device_manager.start_services()
+            if device_manager and hasattr(device_manager, "start_services")
+            else False
+        )
 
     async def check_services(self):
         """Check if device has all required services"""
@@ -75,16 +106,18 @@ class ESP32BLEService(BLEService):
             if not self.client.services:
                 continue
 
-            services = {str(service.uuid).lower()
-                        for service in self.client.services}
-            missing = [name for name, uuid in self.REQUIRED_SERVICES.items(
-            ) if uuid.lower() not in services]
+            services = {str(service.uuid).lower() for service in self.client.services}
+            missing = [
+                name
+                for name, uuid in self.REQUIRED_SERVICES.items()
+                if uuid.lower() not in services
+            ]
 
             if not missing:
                 return True
             elif attempt == 4:
                 return False
-        return True    # Generic data read/write methods
+        return True  # Generic data read/write methods
 
     async def _read_data(self, uuid):
         """Generic data reading"""
@@ -95,8 +128,13 @@ class ESP32BLEService(BLEService):
             if not data:
                 return None
             data_class = next(
-                (cls for _, (u, cls) in self.CHARACTERISTICS.items() if u == uuid), None)
-            return data.decode("utf-8") if data_class == str else data_class.from_bytes(data) if data_class else None
+                (cls for _, (u, cls) in self.CHARACTERISTICS.items() if u == uuid), None
+            )
+            return (
+                data.decode("utf-8")
+                if data_class == str
+                else data_class.from_bytes(data) if data_class else None
+            )
         except:
             return None
 
@@ -122,7 +160,7 @@ class ESP32BLEService(BLEService):
         return await self._read_data(self.MANUFACTURER_UUID)
 
     async def check_hardware_revision(self):
-        return await self._read_data(self.HARDWARE_UUID)    # Config methods
+        return await self._read_data(self.HARDWARE_UUID)  # Config methods
 
     async def read_config(self):
         """Read IMU and sensor configuration"""
@@ -136,7 +174,11 @@ class ESP32BLEService(BLEService):
 
     async def write_config(self, data):
         """Write IMU and sensor configuration"""
-        return await self._write_data(self.CONFIG_UUID, data) if data and len(data) == 15 else False
+        return (
+            await self._write_data(self.CONFIG_UUID, data)
+            if data and len(data) == 15
+            else False
+        )
 
     async def connect(self, device_info):
         """Connect to device with retry logic"""
@@ -188,11 +230,15 @@ class ESP32BLEService(BLEService):
         if not view:
             return False
         try:
-            await self._start_notify_generic(self.BATTERY_LEVEL_UUID, view.update_battery)
-            await self._start_notify_generic(self.BATTERY_CHARGING_UUID, view.update_charging)
+            await self._start_notify_generic(
+                self.BATTERY_LEVEL_UUID, view.update_battery
+            )
+            await self._start_notify_generic(
+                self.BATTERY_CHARGING_UUID, view.update_charging
+            )
             return True
         except:
-            return False    # Simplified notification handler
+            return False  # Simplified notification handler
 
     async def _notification_handler(self, sender, data, callback, data_class, uuid):
         """Unified notification handler"""
@@ -202,8 +248,11 @@ class ESP32BLEService(BLEService):
             elif uuid == self.BATTERY_CHARGING_UUID:
                 callback("Charging" if data[0] == 1 else "Not Charging")
             else:
-                parsed_data = data.decode(
-                    "utf-8") if data_class == str else data_class.from_bytes(data) if data_class else None
+                parsed_data = (
+                    data.decode("utf-8")
+                    if data_class == str
+                    else data_class.from_bytes(data) if data_class else None
+                )
                 if parsed_data and callback:
                     await callback(sender, parsed_data)
         except:
@@ -217,12 +266,16 @@ class ESP32BLEService(BLEService):
         for attempt in range(retries):
             try:
                 data_class = next(
-                    (cls for _, (u, cls) in self.CHARACTERISTICS.items() if u == uuid), None)
+                    (cls for _, (u, cls) in self.CHARACTERISTICS.items() if u == uuid),
+                    None,
+                )
                 self._callbacks[uuid] = callback
 
                 async def handler(sender, data):
                     if self.loop and not self.loop.is_closed():
-                        await self._notification_handler(sender, data, callback, data_class, uuid)
+                        await self._notification_handler(
+                            sender, data, callback, data_class, uuid
+                        )
 
                 await asyncio.sleep(0.1)
                 await self.client.start_notify(uuid, handler)
@@ -244,14 +297,23 @@ class ESP32BLEService(BLEService):
             return True
         except:
             self._callbacks[uuid] = None
-            return False    # Data reading methods using generic reader
+            return False  # Data reading methods using generic reader
 
-    def read_imu1(self): return self._read_data(self.IMU1_CHAR_UUID)
-    def read_imu2(self): return self._read_data(self.IMU2_CHAR_UUID)
-    def read_timestamp(self): return self._read_data(self.TIMESTAMP_CHAR_UUID)
+    def read_imu1(self):
+        return self._read_data(self.IMU1_CHAR_UUID)
 
-    def write_timestamp(self, data): return self._write_data(
-        self.TIMESTAMP_CHAR_UUID, data)
+    def read_imu2(self):
+        return self._read_data(self.IMU2_CHAR_UUID)
 
-    def read_device_name(self): return self.read_characteristic(
-        self.MODEL_NUMBER_UUID) if self.is_connected() else None
+    def read_timestamp(self):
+        return self._read_data(self.TIMESTAMP_CHAR_UUID)
+
+    def write_timestamp(self, data):
+        return self._write_data(self.TIMESTAMP_CHAR_UUID, data)
+
+    def read_device_name(self):
+        return (
+            self.read_characteristic(self.MODEL_NUMBER_UUID)
+            if self.is_connected()
+            else None
+        )

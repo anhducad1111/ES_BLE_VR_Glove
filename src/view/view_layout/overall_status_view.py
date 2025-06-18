@@ -58,7 +58,6 @@ class OverallStatusView(ctk.CTkFrame):
         self._create_status_container()
         self.update_status(False, False, False)
 
-
     def _create_header(self) -> None:
         """Create the header section"""
         header_label = ctk.CTkLabel(

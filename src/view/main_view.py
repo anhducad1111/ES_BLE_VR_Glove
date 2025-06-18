@@ -71,11 +71,11 @@ class MainView:
     def _create_layout(self) -> None:
         """Create main application layout"""
         self._create_top_container()
-        
+
         # Create main content area
         main_content = ctk.CTkFrame(self.window, fg_color="transparent")
         main_content.pack(fill="both", expand=True)
-        
+
         content_frame = self._create_content_frame(main_content)
         self._setup_content_grid(content_frame)
         self._create_left_section(content_frame)
@@ -96,7 +96,7 @@ class MainView:
         # Create device monitor and log view
         self.device_monitor = DeviceMonitorView(container)
         self.device_monitor.grid(row=0, column=0, sticky="nsew")
-        
+
         self.log_view = LogView(container)
         self.log_view.grid(row=0, column=1, sticky="nsew", padx=(20, 0))
 
@@ -104,9 +104,10 @@ class MainView:
         """Create main content frame"""
         content_frame = ctk.CTkFrame(parent, fg_color="transparent")
         content_frame.pack(
-            fill="both", expand=True,
+            fill="both",
+            expand=True,
             padx=self.config.WINDOW_PADDING,
-            pady=(self.view_config.top_margin, self.config.WINDOW_PADDING)
+            pady=(self.view_config.top_margin, self.config.WINDOW_PADDING),
         )
         return content_frame
 
@@ -253,5 +254,3 @@ class MainView:
             self.log_view._stop_logging()
         else:
             print("[MainView] LogView not found")
-
-

@@ -6,9 +6,7 @@ from src.model.overall_status import OverallStatus
 class OverallStatusPresenter:
     """Presenter class for handling overall status updates"""
 
-    def __init__(
-        self, view, esp32_service
-    ):
+    def __init__(self, view, esp32_service):
         """Initialize the presenter
 
         Args:
@@ -18,8 +16,6 @@ class OverallStatusPresenter:
         self.view = view
         self.esp32_service = esp32_service
         self._current_status = None
-
-
 
     async def start_notifications(self):
         """Start overall status notifications with retry logic"""

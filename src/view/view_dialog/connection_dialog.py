@@ -321,9 +321,7 @@ class ConnectionDialog(BaseDialog):
 
         # Reset button state unless connection was successful
         if not hasattr(self, "connection_success") or not self.connection_success:
-            self.connect_btn.configure(
-                state="normal", text=self.original_connect_text
-            )
+            self.connect_btn.configure(state="normal", text=self.original_connect_text)
             self.status_dialog.grab_release()
             self.grab_set()
         elif self.connection_success:

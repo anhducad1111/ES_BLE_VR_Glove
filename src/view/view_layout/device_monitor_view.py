@@ -23,7 +23,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             padx=self.config.WINDOW_PADDING,
             pady=self.config.WINDOW_PADDING,
         )
-        
+
         # self.pack_propagate(False)
         # UI Components
         self.info_frame = None
@@ -257,9 +257,9 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             if not getattr(self.connection_dialog, "connection_success", False):
                 self.device_button.configure(
                     fg_color=self.config.BUTTON_COLOR,
-                    hover_color=self.config.BUTTON_HOVER_COLOR
+                    hover_color=self.config.BUTTON_HOVER_COLOR,
                 )
-    
+
     def _handle_device_button(self):
         """Handle button click based on connection state"""
         print(f"Device button clicked, is_connected: {self.is_connected}")
@@ -321,9 +321,11 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
                 BleakScanner,
                 self._handle_connection,
             )
-            
+
             # Bind the dialog's destroy event to reset button if no connection was made
-            self.connection_dialog.bind("<Destroy>", lambda e: self._reset_button_on_dialog_close())
+            self.connection_dialog.bind(
+                "<Destroy>", lambda e: self._reset_button_on_dialog_close()
+            )
 
             # Make dialog modal
             self.connection_dialog.transient(self.winfo_toplevel())
