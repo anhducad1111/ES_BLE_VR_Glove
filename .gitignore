@@ -64,6 +64,4 @@ venv.bak/
 # Config files containing sensitive data
 gatt.json
 assets/gatttable.csv
-bat/
 commit_log.txt
-ES_BLE_UI_venv/

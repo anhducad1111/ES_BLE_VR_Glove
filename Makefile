@@ -1,4 +1,4 @@
-.PHONY: setup clean build test format lint release all
+.PHONY: setup clean build test format lint release govenv all
 
 PYTHON := python
 VENV := venv
@@ -15,6 +15,10 @@ $(VENV):
 	$(BIN)\pip install -r requirements-dev.txt
 
 setup: $(VENV)
+
+govenv: setup
+	@echo Activating virtual environment...
+	@powershell -NoExit -Command "& '$(BIN)\Activate.ps1'"
 
 clean:
 	if exist $(VENV) rmdir /S /Q $(VENV)
