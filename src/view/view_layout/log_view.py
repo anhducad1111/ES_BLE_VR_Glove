@@ -61,7 +61,7 @@ class LogView(ctk.CTkFrame):
         # Configure grid for path entry and icon
         path_container.grid_columnconfigure(0, weight=1)  # Entry expands
         path_container.grid_columnconfigure(1, weight=0)  # Icon stays fixed
-        
+
         # Path container top row
         path_frame = ctk.CTkFrame(path_container, fg_color="transparent")
         path_frame.grid(row=0, column=0, columnspan=2, sticky="ew")
@@ -85,16 +85,17 @@ class LogView(ctk.CTkFrame):
         )
         folder_label.grid(row=0, column=1, padx=(0, 15), sticky="e")
         folder_label.bind("<Button-1>", lambda e: self._on_choose_folder())
-        
+
         # Create log button in its own row
         button_frame = ctk.CTkFrame(path_container, fg_color="transparent")
-        button_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(10,0))
+        button_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(10, 0))
         button_frame.grid_columnconfigure(0, weight=1)  # Push button to right
 
-        self.log_button = ButtonComponent(button_frame, "Start Log", command=self._on_log)
+        self.log_button = ButtonComponent(
+            button_frame, "Start Log", command=self._on_log
+        )
         self.log_button.grid(row=0, column=0, sticky="e")
         self.log_button.configure(state="disabled")
-
 
     # endregion
 
@@ -142,56 +143,56 @@ class LogView(ctk.CTkFrame):
 
     # region Logging Control
     def _handle_logging_state(self, start: bool) -> None:
-       """Handle logging state changes"""
-       try:
-           if start:
-               if self.presenter.start_all_logging():
-                   self._update_button_for_logging()
-           else:
-               self.presenter.stop_all_logging()
-               self._update_button_for_stopped()
-       except Exception as e:
-           print(f"Error {'starting' if start else 'stopping'} logging: {e}")
-           if start:
-               self._stop_logging()
+        """Handle logging state changes"""
+        try:
+            if start:
+                if self.presenter.start_all_logging():
+                    self._update_button_for_logging()
+            else:
+                self.presenter.stop_all_logging()
+                self._update_button_for_stopped()
+        except Exception as e:
+            print(f"Error {'starting' if start else 'stopping'} logging: {e}")
+            if start:
+                self._stop_logging()
 
     def _update_button_for_logging(self) -> None:
-       """Update button appearance for logging state"""
-       self.log_button.configure(
-           text="Stop Log", fg_color="darkred", hover_color="#8B0000"
-       )
+        """Update button appearance for logging state"""
+        self.log_button.configure(
+            text="Stop Log", fg_color="darkred", hover_color="#8B0000"
+        )
 
     def _update_button_for_stopped(self) -> None:
-       """Update button appearance for stopped state"""
-       self.selected_folder = None
-       self.log_button.configure(
-           text="Start Log",
-           fg_color=self.config.BUTTON_COLOR,
-           hover_color=self.config.BUTTON_HOVER_COLOR,
-       )
+        """Update button appearance for stopped state"""
+        self.selected_folder = None
+        self.log_button.configure(
+            text="Start Log",
+            fg_color=self.config.BUTTON_COLOR,
+            hover_color=self.config.BUTTON_HOVER_COLOR,
+        )
 
     def _on_log(self) -> None:
-       """Handle log button clicks"""
-       if not self.presenter:
-           return
+        """Handle log button clicks"""
+        if not self.presenter:
+            return
 
-       if self.log_manager.get_imu1_logger().is_logging:
-           self._stop_logging()
-       else:
-           self.selected_folder = self.log_manager.get_selected_folder()
-           self._start_logging()
+        if self.log_manager.get_imu1_logger().is_logging:
+            self._stop_logging()
+        else:
+            self.selected_folder = self.log_manager.get_selected_folder()
+            self._start_logging()
 
     def _start_logging(self) -> None:
-       """Start the logging process"""
-       self._handle_logging_state(True)
+        """Start the logging process"""
+        self._handle_logging_state(True)
 
     def _stop_logging(self) -> None:
-       """Stop the logging process"""
-       self._handle_logging_state(False)
+        """Stop the logging process"""
+        self._handle_logging_state(False)
 
     def set_presenter(self, presenter) -> None:
-       """Set the presenter reference"""
-       self.presenter = presenter
+        """Set the presenter reference"""
+        self.presenter = presenter
 
     def clear_values(self) -> None:
         """Reset logging state"""
@@ -204,18 +205,19 @@ class LogView(ctk.CTkFrame):
         self.set_button_states(False)
 
     def set_button_states(self, enabled: bool) -> None:
-       """Enable or disable interactive elements"""
-       self.log_button.configure(state="normal" if enabled else "disabled")
+        """Enable or disable interactive elements"""
+        self.log_button.configure(state="normal" if enabled else "disabled")
 
     def show_log_button(self, show: bool) -> None:
-       """Show or hide the log button"""
-       if show:
-           self.log_button.pack()
-       else:
-           self.log_button.pack_forget()
+        """Show or hide the log button"""
+        if show:
+            self.log_button.pack()
+        else:
+            self.log_button.pack_forget()
 
     def _on_folder_change(self, folder: str) -> None:
-       """Handle folder selection changes"""
-       self.selected_folder = folder
-       self.log_button.configure(text="Start Log")
+        """Handle folder selection changes"""
+        self.selected_folder = folder
+        self.log_button.configure(text="Start Log")
+
     # endregion

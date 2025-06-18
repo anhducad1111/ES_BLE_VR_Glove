@@ -226,7 +226,7 @@ class GamepadView(ctk.CTkFrame):
         """
         self.joystick_button.configure(
             fg_color=self.config.BUTTON_COLOR if is_active else self.config.FRAME_BG,
-            state="normal" if is_active else "disabled"
+            state="normal" if is_active else "disabled",
         )
 
     def clear_values(self):

@@ -88,7 +88,7 @@ class DeviceManager:
                 "imu2",
                 "sensor",  # Sensors
                 "gamepad",  # Gamepad
-                "log",     # Log manager
+                "log",  # Log manager
             ]
 
             # Start all services concurrently
@@ -138,7 +138,7 @@ class DeviceManager:
             "imu2",
             "sensor",  # Sensors
             "gamepad",  # Gamepad
-            "log",    # Log manager
+            "log",  # Log manager
         ]
 
         try:

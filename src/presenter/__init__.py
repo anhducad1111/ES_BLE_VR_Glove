@@ -1,6 +1,7 @@
 from src.presenter.connection_presenter import ConnectionPresenter
 from src.presenter.gamepad_presenter import GamepadPresenter
 from src.presenter.imu_presenter import IMUPresenter
+from src.presenter.log_presenter import LogPresenter
 from src.presenter.overall_status_presenter import OverallStatusPresenter
 from src.presenter.profile_presenter import ProfilePresenter
 from src.presenter.sensor_presenter import SensorPresenter

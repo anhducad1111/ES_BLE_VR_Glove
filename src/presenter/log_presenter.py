@@ -1,21 +1,24 @@
 from src.util.log_manager import LogManager
 
+
 class LogPresenter:
     """Presenter for handling log view operations"""
 
-    def __init__(self, view, ble_service, loop, imu1_presenter, imu2_presenter, sensor_presenter):
+    def __init__(
+        self, view, ble_service, loop, imu1_presenter, imu2_presenter, sensor_presenter
+    ):
         """Initialize the presenter
-        
+
         Args:
             view: Reference to the log view
             ble_service: Reference to the ESP32 BLE service
-            loop: Event loop for async operations 
+            loop: Event loop for async operations
             imu1_presenter: Reference to IMU1 presenter
             imu2_presenter: Reference to IMU2 presenter
             sensor_presenter: Reference to sensor presenter
         """
         self.view = view
-        self.service = ble_service 
+        self.service = ble_service
         self.loop = loop
         self.imu1_presenter = imu1_presenter
         self.imu2_presenter = imu2_presenter

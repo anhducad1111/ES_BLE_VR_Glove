@@ -141,7 +141,6 @@ class ConnectionPresenter:
         """Disconnect from current device"""
         try:
             print("[ConnectionPresenter] Starting disconnect")
-            
             # Stop heartbeat monitoring before disconnecting
             self.view.stop_heartbeat()
 
