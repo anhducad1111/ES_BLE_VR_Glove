@@ -1,128 +1,128 @@
+"""ESP32 BLE Service Implementation"""
 import asyncio
-
-from src.config.constant import BLEConstants
+from src.config.constant import BLEConstants as C
 from src.model.ble_service import BLEService
+from src.model.device_manager import DeviceManager
 
 
 class ESP32BLEService(BLEService):
-    """ESP32-specific BLE service implementation"""
+    """ESP32 BLE service for VR glove device"""
 
-    REQUIRED_SERVICES = BLEConstants.REQUIRED_SERVICES
-    CHARACTERISTICS = BLEConstants.CHARACTERISTICS
+    REQUIRED_SERVICES = C.REQUIRED_SERVICES
+    CHARACTERISTICS = C.CHARACTERISTICS
 
-    # Configuration maps from BLEConstants
-    ACCEL_GYRO_FREQ_MAP = BLEConstants.ACCEL_GYRO_FREQ_MAP
-    MAG_FREQ_MAP = BLEConstants.MAG_FREQ_MAP
-    ACCEL_RANGE_MAP = BLEConstants.ACCEL_RANGE_MAP
-    GYRO_RANGE_MAP = BLEConstants.GYRO_RANGE_MAP
-    MAG_RANGE_MAP = BLEConstants.MAG_RANGE_MAP
+    # Config maps
+    locals().update({name: getattr(C, name) for name in [
+        'ACCEL_GYRO_FREQ_MAP', 'MAG_FREQ_MAP', 'ACCEL_RANGE_MAP',
+        'GYRO_RANGE_MAP', 'MAG_RANGE_MAP', 'ACCEL_GYRO_FREQ_REV_MAP',
+        'MAG_FREQ_REV_MAP', 'ACCEL_RANGE_REV_MAP', 'GYRO_RANGE_REV_MAP',
+        'MAG_RANGE_REV_MAP'
+    ]})
 
-    # Reverse maps for config writing
-    ACCEL_GYRO_FREQ_REV_MAP = BLEConstants.ACCEL_GYRO_FREQ_REV_MAP
-    MAG_FREQ_REV_MAP = BLEConstants.MAG_FREQ_REV_MAP
-    ACCEL_RANGE_REV_MAP = BLEConstants.ACCEL_RANGE_REV_MAP
-    GYRO_RANGE_REV_MAP = BLEConstants.GYRO_RANGE_REV_MAP
-    MAG_RANGE_REV_MAP = BLEConstants.MAG_RANGE_REV_MAP
+    # Notification types for dynamic method generation
+    _NOTIFY_TYPES = ['imu1', 'imu2', 'imu1_euler', 'imu2_euler',
+                     'flex_sensor', 'force_sensor', 'joystick', 'buttons',
+                     'config', 'overall_status', 'battery_level', 'battery_charging']
 
     def __init__(self):
         super().__init__()
-        # Create UUID class attributes and initialize callbacks dictionary
         self._callbacks = {}
-        self.loop = None  # Event loop set by presenter
+        self.loop = None
+
+        # Set UUIDs as attributes
         for name, (uuid, _) in self.CHARACTERISTICS.items():
             setattr(self, name, uuid)
             self._callbacks[uuid] = None
+            # Generate notification methods dynamically
+        self._generate_notification_methods()
+
+    def _generate_notification_methods(self):
+        """Dynamically generate notification start/stop methods"""
+        for notify_type in self._NOTIFY_TYPES:
+            uuid_attr = f"{notify_type.upper()}_UUID"
+            if hasattr(self, uuid_attr):
+                uuid = getattr(self, uuid_attr)
+
+                # Create start method
+                def start_method(
+                    cb, u=uuid): return self._start_notify_generic(u, cb)
+                setattr(self, f"start_{notify_type}_notify", start_method)
+
+                # Create stop method
+                def stop_method(u=uuid): return self._stop_notify_generic(u)
+                setattr(self, f"stop_{notify_type}_notify", stop_method)
 
     def set_loop(self, loop):
         """Set event loop for async operations"""
         self.loop = loop
 
     async def start_services(self):
-        """Start all device services - delegates to DeviceManager"""
-        # Find the DeviceManager instance
-        from src.model.device_manager import DeviceManager
-
+        """Start all device services"""
+        
         device_manager = DeviceManager()
-        if device_manager and hasattr(device_manager, "start_services"):
-            return await device_manager.start_services()
-        return False
+        return await device_manager.start_services() if device_manager and hasattr(device_manager, "start_services") else False
 
     async def check_services(self):
         """Check if device has all required services"""
-        try:
+        if not self.client or not self.client.is_connected:
+            return False
+
+        for attempt in range(5):
+            await asyncio.sleep(0.2)
             if not self.client or not self.client.is_connected:
                 return False
 
-            # Get available services
-            print("\nChecking device services...")
+            if not self.client.services:
+                continue
 
-            # Discovery delay and retry
-            max_retries = 5
-            for attempt in range(max_retries):
-                # Wait for services to be discovered
-                await asyncio.sleep(0.2)
+            services = {str(service.uuid).lower()
+                        for service in self.client.services}
+            missing = [name for name, uuid in self.REQUIRED_SERVICES.items(
+            ) if uuid.lower() not in services]
 
-                # Check if still connected
-                if not self.client or not self.client.is_connected:
-                    print("Lost connection during service discovery")
-                    return False
+            if not missing:
+                return True
+            elif attempt == 4:
+                return False
+        return True    # Generic data read/write methods
 
-                # Instead of get_services(), access services directly
-                if not self.client.services:
-                    print("No services found, waiting for discovery...")
-                    continue
+    async def _read_data(self, uuid):
+        """Generic data reading"""
+        if not self.is_connected():
+            return None
+        try:
+            data = await self.read_characteristic(uuid)
+            if not data:
+                return None
+            data_class = next(
+                (cls for _, (u, cls) in self.CHARACTERISTICS.items() if u == uuid), None)
+            return data.decode("utf-8") if data_class == str else data_class.from_bytes(data) if data_class else None
+        except:
+            return None
 
-                print(
-                    f"\nChecking required services (attempt {attempt + 1}/{max_retries}):"
-                )
-                # Get all services
-                services = {
-                    str(service.uuid).lower() for service in self.client.services
-                }
-
-                # Print available services
-                print("Available services:")
-                for service in self.client.services:
-                    print(f"- {service.uuid}")
-
-                # Check each required service
-                missing_services = []
-                for name, uuid in self.REQUIRED_SERVICES.items():
-                    if uuid.lower() not in services:
-                        print(f"❌ Missing {name} service ({uuid})")
-                        missing_services.append(name)
-                    else:
-                        print(f"✓ Found {name} service ({uuid})")
-
-                if not missing_services:
-                    return True
-                elif attempt < max_retries - 1:
-                    print(f"\nRetrying service discovery...")
-                else:
-                    print(f"\nMissing required services: {', '.join(missing_services)}")
-                    return False
-
+    async def _write_data(self, uuid, data):
+        """Generic data writing"""
+        if not self.is_connected() or not data:
+            return False
+        try:
+            raw_data = data.raw_data if hasattr(data, "raw_data") else data
+            await self.write_characteristic(uuid, raw_data)
             return True
-        except Exception as e:
-            print(f"Error checking services: {e}")
+        except:
             return False
 
-    # Implement required abstract methods
+    # Profile methods using generic read
     async def check_firmware_revision(self):
-        """Check firmware revision string"""
-        return await self._read_characteristic_data(self.FIRMWARE_UUID)
+        return await self._read_data(self.FIRMWARE_UUID)
 
     async def check_model_number(self):
-        """Check model number string"""
-        return await self._read_characteristic_data(self.MODEL_NUMBER_UUID)
+        return await self._read_data(self.MODEL_NUMBER_UUID)
 
     async def check_manufacturer(self):
-        """Check manufacturer string"""
-        return await self._read_characteristic_data(self.MANUFACTURER_UUID)
+        return await self._read_data(self.MANUFACTURER_UUID)
 
     async def check_hardware_revision(self):
-        """Check hardware revision string"""
-        return await self._read_characteristic_data(self.HARDWARE_UUID)
+        return await self._read_data(self.HARDWARE_UUID)    # Config methods
 
     async def read_config(self):
         """Read IMU and sensor configuration"""
@@ -130,399 +130,128 @@ class ESP32BLEService(BLEService):
             return None
         try:
             data = await self.read_characteristic(self.CONFIG_UUID)
-            if not data or len(data) < 15:  # Must have at least 15 bytes
-                return None
-                
-            # Log IMU configurations
-            # print("\nIMU Configuration Data:")
-
-            # print("\nFrequency Settings:")
-            # print("IMU1:")
-            # print(f"- Accel & Gyro: {self.ACCEL_GYRO_FREQ_MAP[data[1]]} Hz")
-            # print(f"- Magnetometer: {self.MAG_FREQ_MAP[data[2]]} Hz")
-            # print("IMU2:")
-            # print(f"- Accel & Gyro: {self.ACCEL_GYRO_FREQ_MAP[data[3]]} Hz")
-            # print(f"- Magnetometer: {self.MAG_FREQ_MAP[data[4]]} Hz")
-
-            # print("\nRange Settings:")
-            # print("IMU1:")
-            # print(f"- Accelerometer: ±{self.ACCEL_RANGE_MAP[data[5]]} g")
-            # print(f"- Gyroscope: ±{self.GYRO_RANGE_MAP[data[6]]} dps")
-            # print(f"- Magnetometer: ±{self.MAG_RANGE_MAP[data[7]]} uT")
-            # print("IMU2:")
-            # print(f"- Accelerometer: ±{self.ACCEL_RANGE_MAP[data[8]]} g")
-            # print(f"- Gyroscope: ±{self.GYRO_RANGE_MAP[data[9]]} dps")
-            # print(f"- Magnetometer: ±{self.MAG_RANGE_MAP[data[10]]} uT")
-
-
-            return data
-        except Exception as e:
-            print(f"Error reading config: {e}")
+            return data if data and len(data) >= 15 else None
+        except:
             return None
 
     async def write_config(self, data):
-        """Write IMU and sensor configuration
-
-        Args:
-            data (bytes): 15 bytes configuration data
-        Returns:
-            bool: True if successful
-        """
-        if not self.is_connected() or not data or len(data) != 15:
-            return False
-        try:
-            await self.write_characteristic(self.CONFIG_UUID, data)
-            return True
-        except Exception as e:
-            print(f"Error writing config: {e}")
-            return False
+        """Write IMU and sensor configuration"""
+        return await self._write_data(self.CONFIG_UUID, data) if data and len(data) == 15 else False
 
     async def connect(self, device_info):
-        """Connect to a BLE device and check profiles with improved error handling"""
+        """Connect to device with retry logic"""
         try:
-            # Clean up any existing connection and notifications
             if self.is_connected():
                 await self.disconnect()
-                await asyncio.sleep(1.0)  # Wait for cleanup
+                await asyncio.sleep(1.0)
 
-            # Attempt connection with retry
-            max_connect_retries = 5
-            result = False
-
-            for attempt in range(max_connect_retries):
+            # Connection retry
+            for attempt in range(5):
                 try:
-                    result = await super().connect(device_info)
-                    if result:
+                    if await super().connect(device_info):
                         break
-                    if attempt < max_connect_retries - 1:
-                        print(f"Connection attempt {attempt + 1} failed, retrying...")
+                    if attempt < 4:
                         await asyncio.sleep(0.5)
-                except Exception as e:
-                    print(f"Connection error on attempt {attempt + 1}: {e}")
-                    if attempt < max_connect_retries - 1:
+                except Exception:
+                    if attempt < 4:
                         await asyncio.sleep(0.5)
                         continue
-                    result = False
-                    break
-
-            if not result:
-                print("Failed to establish connection after retries")
+                    return False
+            else:
                 return False
 
-            # Wait for connection stability
             await asyncio.sleep(1.0)
 
-            # Check for required services
-            has_services = await self.check_services()
-            if not has_services:
-                print("Required services not found")
+            # Check services
+            if not await self.check_services():
                 await self.disconnect()
                 return False
 
-            # Additional wait for service stability
             await asyncio.sleep(0.5)
 
+            # Read profiles
             try:
-                # Read device profiles
-                print("Reading device profiles...")
                 device_info.firmware = await self.check_firmware_revision()
                 device_info.model = await self.check_model_number()
                 device_info.manufacturer = await self.check_manufacturer()
                 device_info.hardware = await self.check_hardware_revision()
-                
-                # # Log device info
-                # print("\nDevice Information:")
-                # print(f"Firmware: {device_info.firmware}")
-                # print(f"Model: {device_info.model}")
-                # print(f"Manufacturer: {device_info.manufacturer}")
-                # print(f"Hardware: {device_info.hardware}")
-            except Exception as e:
-                print(f"Warning: Error reading device profiles: {e}")
-                # Continue even if profile reading fails
+            except:
+                pass  # Continue even if profile reading fails
 
             return True
-
-        except Exception as e:
-            print(f"Fatal error during connection process: {e}")
+        except:
             await self.disconnect()
             return False
 
     async def start_profile_notifications(self, view):
-        """Start all profile-related notifications"""
+        """Start battery and charging notifications"""
         if not view:
             return False
-
         try:
-            # Pass non-async view methods directly
-            await self._start_notify_generic(
-                self.BATTERY_LEVEL_UUID, view.update_battery
-            )
-            await self._start_notify_generic(
-                self.BATTERY_CHARGING_UUID, view.update_charging
-            )
+            await self._start_notify_generic(self.BATTERY_LEVEL_UUID, view.update_battery)
+            await self._start_notify_generic(self.BATTERY_CHARGING_UUID, view.update_charging)
             return True
-        except Exception as e:
-            print(f"Error starting profile notifications: {e}")
-            return False
+        except:
+            return False    # Simplified notification handler
 
-    async def _read_characteristic_data(self, uuid):
-        """Generic method to read and parse characteristic data"""
-        if not self.is_connected():
-            return None
-
+    async def _notification_handler(self, sender, data, callback, data_class, uuid):
+        """Unified notification handler"""
         try:
-            data = await self.read_characteristic(uuid)
-            if not data:
-                return None
-
-            # Get the data class for this UUID
-            data_class = next(
-                (cls for _, (u, cls) in self.CHARACTERISTICS.items() if u == uuid), None
-            )
-            if not data_class:
-                return None
-
-            # Handle string data types
-            if data_class == str:
-                return data.decode("utf-8")
-
-            # Handle data model classes
-            return data_class.from_bytes(data)
-
-        except Exception as e:
-            print(f"Error reading characteristic {uuid}: {e}")
-            return None
-
-    async def _write_characteristic_data(self, uuid, data):
-        """Generic method to write characteristic data"""
-        if not self.is_connected() or not data:
-            return False
-
-        try:
-            # Handle data objects with raw_data attribute
-            raw_data = data.raw_data if hasattr(data, "raw_data") else data
-            await self.write_characteristic(uuid, raw_data)
-            return True
-        except Exception as e:
-            print(f"Error writing characteristic {uuid}: {e}")
-            return False
-
-    async def _generic_notification_handler(
-        self, sender, data, callback, data_class, uuid
-    ):
-        """Generic handler for notifications"""
-        try:
-            # Handle battery notifications directly (non-async)
             if uuid == self.BATTERY_LEVEL_UUID:
-                level = int(data[0])
-                # print(f"Battery Level: {level}%")  # Log battery level
-                callback(level)  # Raw battery level (0-100)
-                return
+                callback(int(data[0]))
             elif uuid == self.BATTERY_CHARGING_UUID:
-                charging = data[0] == 1
-                # print(f"Charging Status: {'Charging' if charging else 'Not Charging'}")  # Log charging status
-                callback("Charging" if charging else "Not Charging")
-                return
-
-            # For other notifications that need data classes
-            if data_class is None:
-                print(f"No data class for UUID {uuid}")
-                return
-
-            if data_class == str:
-                parsed_data = data.decode("utf-8")
+                callback("Charging" if data[0] == 1 else "Not Charging")
             else:
-                parsed_data = data_class.from_bytes(data)
+                parsed_data = data.decode(
+                    "utf-8") if data_class == str else data_class.from_bytes(data) if data_class else None
+                if parsed_data and callback:
+                    await callback(sender, parsed_data)
+        except:
+            pass  # Silent fail for notifications
 
-            if parsed_data and callback:
-                await callback(sender, parsed_data)
-
-        except Exception as e:
-            # Get characteristic name for better error messages
-            char_name = next(
-                (name for name, (u, _) in self.CHARACTERISTICS.items() if u == uuid),
-                str(uuid),
-            )
-            print(f"Error in {char_name} notification handler: {e}")
-
-    async def _start_notify_generic(self, uuid, callback, retries=5, delay=0.2):
-        """Generic method to start notifications with retry logic"""
+    async def _start_notify_generic(self, uuid, callback, retries=5):
+        """Generic notification starter with retry"""
         if not self.is_connected():
             return False
 
         for attempt in range(retries):
             try:
                 data_class = next(
-                    (cls for _, (u, cls) in self.CHARACTERISTICS.items() if u == uuid),
-                    None,
-                )
+                    (cls for _, (u, cls) in self.CHARACTERISTICS.items() if u == uuid), None)
                 self._callbacks[uuid] = callback
 
                 async def handler(sender, data):
-                    try:
-                        if self.loop and not self.loop.is_closed():
-                            await self._generic_notification_handler(
-                                sender, data, callback, data_class, uuid
-                            )
-                    except Exception as e:
-                        print(f"Error in notification handler for {uuid}: {e}")
+                    if self.loop and not self.loop.is_closed():
+                        await self._notification_handler(sender, data, callback, data_class, uuid)
 
-                await asyncio.sleep(0.1)  # Small delay before starting
+                await asyncio.sleep(0.1)
                 await self.client.start_notify(uuid, handler)
-                print(f"✓ Started notifications for {uuid}")
                 return True
-
-            except Exception as e:
-                print(
-                    f"Error starting notifications for {uuid} (attempt {attempt + 1}/{retries}): {e}"
-                )
+            except:
                 if attempt < retries - 1:
-                    await asyncio.sleep(delay)
-                    print(f"Retrying...")
-                continue
-
-        print(f"❌ Failed to start notifications for {uuid} after {retries} attempts")
+                    await asyncio.sleep(0.2)
+                    continue
         return False
 
     async def _stop_notify_generic(self, uuid):
-        """Generic method to stop notifications"""
-        if not self.client:  # Already disconnected
+        """Generic notification stopper"""
+        if not self.client:
             self._callbacks[uuid] = None
             return True
-
         try:
             await self.client.stop_notify(uuid)
             self._callbacks[uuid] = None
             return True
-        except Exception as e:
-            if hasattr(e, "args") and len(e.args) > 0:
-                err_code = str(e.args[0])
-                if err_code == "61":  # Already stopped
-                    self._callbacks[uuid] = None
-                    return True
-            print(f"Error stopping notifications for {uuid}: {e}")
-            return False
+        except:
+            self._callbacks[uuid] = None
+            return False    # Data reading methods using generic reader
 
-    async def _start_battery_notifications(self, view):
-        """Start battery notifications using view directly"""
-        await self._start_notify_generic(self.BATTERY_LEVEL_UUID, view.update_battery)
-        await self._start_notify_generic(
-            self.BATTERY_CHARGING_UUID, view.update_charging
-        )
+    def read_imu1(self): return self._read_data(self.IMU1_CHAR_UUID)
+    def read_imu2(self): return self._read_data(self.IMU2_CHAR_UUID)
+    def read_timestamp(self): return self._read_data(self.TIMESTAMP_CHAR_UUID)
 
-    async def stop_battery_notifications(self):
-        """Stop battery and charging notifications"""
-        await self._stop_notify_generic(self.BATTERY_LEVEL_UUID)
-        await self._stop_notify_generic(self.BATTERY_CHARGING_UUID)
+    def write_timestamp(self, data): return self._write_data(
+        self.TIMESTAMP_CHAR_UUID, data)
 
-    # IMU Methods
-    async def start_imu1_notify(self, callback):
-        """Start IMU1 notifications"""
-        return await self._start_notify_generic(self.IMU1_CHAR_UUID, callback)
-
-    async def start_imu2_notify(self, callback):
-        """Start IMU2 notifications"""
-        return await self._start_notify_generic(self.IMU2_CHAR_UUID, callback)
-
-    async def stop_imu1_notify(self):
-        """Stop IMU1 notifications"""
-        return await self._stop_notify_generic(self.IMU1_CHAR_UUID)
-
-    async def stop_imu2_notify(self):
-        """Stop IMU2 notifications"""
-        return await self._stop_notify_generic(self.IMU2_CHAR_UUID)
-
-    # IMU Euler Methods
-    async def start_imu1_euler_notify(self, callback):
-        """Start IMU1 Euler angles notifications"""
-        return await self._start_notify_generic(self.IMU1_EULER_UUID, callback)
-
-    async def start_imu2_euler_notify(self, callback):
-        """Start IMU2 Euler angles notifications"""
-        return await self._start_notify_generic(self.IMU2_EULER_UUID, callback)
-
-    async def stop_imu1_euler_notify(self):
-        """Stop IMU1 Euler angles notifications"""
-        return await self._stop_notify_generic(self.IMU1_EULER_UUID)
-
-    async def stop_imu2_euler_notify(self):
-        """Stop IMU2 Euler angles notifications"""
-        return await self._stop_notify_generic(self.IMU2_EULER_UUID)
-
-    # Overall Status Methods
-    async def start_overall_status_notify(self, callback):
-        """Start overall status notifications"""
-        return await self._start_notify_generic(self.OVERALL_STATUS_UUID, callback)
-
-    async def stop_overall_status_notify(self):
-        """Stop overall status notifications"""
-        return await self._stop_notify_generic(self.OVERALL_STATUS_UUID)
-
-    # Sensor Notification Methods
-    async def start_flex_sensor_notify(self, callback):
-        """Enable flex sensor data notifications"""
-        return await self._start_notify_generic(self.FLEX_SENSOR_UUID, callback)
-
-    async def start_force_sensor_notify(self, callback):
-        """Enable force sensor data notifications"""
-        return await self._start_notify_generic(self.FORCE_SENSOR_UUID, callback)
-
-    async def stop_flex_sensor_notify(self):
-        """Disable flex sensor data notifications"""
-        return await self._stop_notify_generic(self.FLEX_SENSOR_UUID)
-
-    async def stop_force_sensor_notify(self):
-        """Disable force sensor data notifications"""
-        return await self._stop_notify_generic(self.FORCE_SENSOR_UUID)
-
-    # Gamepad Input Methods
-    async def start_joystick_notify(self, callback):
-        """Enable joystick input notifications"""
-        return await self._start_notify_generic(self.JOYSTICK_UUID, callback)
-
-    async def start_buttons_notify(self, callback):
-        """Enable button press notifications"""
-        return await self._start_notify_generic(self.BUTTONS_UUID, callback)
-
-    async def stop_joystick_notify(self):
-        """Disable joystick input notifications"""
-        return await self._stop_notify_generic(self.JOYSTICK_UUID)
-
-    async def stop_buttons_notify(self):
-        """Disable button press notifications"""
-        return await self._stop_notify_generic(self.BUTTONS_UUID)
-
-    # Configuration Methods
-    async def start_config_notify(self, callback):
-        """Enable configuration change notifications"""
-        return await self._start_notify_generic(self.CONFIG_UUID, callback)
-
-    async def stop_config_notify(self):
-        """Disable configuration change notifications"""
-        return await self._stop_notify_generic(self.CONFIG_UUID)
-
-    # Data Reading Methods
-    async def read_imu1(self):
-        """Read current IMU1 sensor data"""
-        return await self._read_characteristic_data(self.IMU1_CHAR_UUID)
-
-    async def read_imu2(self):
-        """Read current IMU2 sensor data"""
-        return await self._read_characteristic_data(self.IMU2_CHAR_UUID)
-
-    async def read_timestamp(self):
-        """Read current timestamp value"""
-        return await self._read_characteristic_data(self.TIMESTAMP_CHAR_UUID)
-
-    async def write_timestamp(self, timestamp_data):
-        """Update device timestamp"""
-        return await self._write_characteristic_data(
-            self.TIMESTAMP_CHAR_UUID, timestamp_data
-        )
-
-    async def read_device_name(self):
-        """Read device name for connection heartbeat"""
-        try:
-            return await self.read_characteristic(self.MODEL_NUMBER_UUID)
-        except Exception:
-            return None
+    def read_device_name(self): return self.read_characteristic(
+        self.MODEL_NUMBER_UUID) if self.is_connected() else None
