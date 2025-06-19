@@ -31,7 +31,6 @@ class OverallStatusPresenter:
                     self._handle_status_update
                 )
                 if result:
-                    self.view.set_button_states(True)
                     return True
                 await asyncio.sleep(delay)
             except Exception:
