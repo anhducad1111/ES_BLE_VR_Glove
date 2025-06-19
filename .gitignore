@@ -65,3 +65,4 @@ venv.bak/
 gatt.json
 assets/gatttable.csv
 commit_log.txt
+docs/
