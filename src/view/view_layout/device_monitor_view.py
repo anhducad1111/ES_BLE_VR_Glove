@@ -62,7 +62,12 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
 
     def show_connection_lost(self):
         """Show UI elements for lost connection"""
-        self.device_button.configure(fg_color="red")
+        if self.is_connected:  # Only show red button if still marked as connected
+            self.device_button.configure(
+                text="Connection Lost",
+                fg_color="red",
+                hover_color="#B22222"
+            )
 
     def update_connection_status(self, connected, device_info=None, message=""):
         """Update connection status display"""
@@ -78,8 +83,12 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
                 self.current_device_address = device_info.address
 
             # Update button state
+            self.is_connected = True  # Update connection state first
             self.device_button.configure(
-                text="Disconnect", fg_color="#8B0000", hover_color="#B22222"
+                text="Disconnect",
+                fg_color="#8B0000",
+                hover_color="#B22222",
+                state="normal"
             )
 
             # Update device info
@@ -94,14 +103,17 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             )
             self.update_value("hardware", device_info.hardware if device_info else "--")
         else:
-            # Reset button state
+            # Reset button state and ensure it's enabled
             self.device_button.configure(
                 text="Add device",
                 fg_color=self.config.BUTTON_COLOR,
                 hover_color=self.config.BUTTON_HOVER_COLOR,
+                state="normal"
             )
 
-            # Reset all fields
+            # Reset all fields and connection state
+            self.is_connected = False
+            self.current_device_address = None
             self.clear_values()
 
     # endregion
@@ -233,7 +245,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             self.value_labels[field_id].configure(text=str(value))
 
     def clear_values(self):
-        """Clear all values"""
+        """Clear all values and reset display"""
         fields_to_clear = [
             "name",
             "status",
@@ -244,9 +256,19 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             "manufacturer",
             "hardware",
         ]
+        # Reset all fields to default state
         for field_id in fields_to_clear:
             if field_id in self.value_labels:
                 self.update_value(field_id, "--")
+
+        # Ensure button is in correct state
+        if not self.is_connected:
+            self.device_button.configure(
+                text="Add device",
+                state="normal",
+                fg_color=self.config.BUTTON_COLOR,
+                hover_color=self.config.BUTTON_HOVER_COLOR
+            )
 
     # endregion
 
@@ -262,11 +284,9 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
 
     def _handle_device_button(self):
         """Handle button click based on connection state"""
-        print(f"Device button clicked, is_connected: {self.is_connected}")
         if self.is_connected:
             self._disconnect_device()
         else:
-            print("Showing connection dialog...")
             self._show_connection_dialog()
 
     async def _disconnect_async(self):
