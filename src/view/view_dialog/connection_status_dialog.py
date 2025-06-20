@@ -102,7 +102,7 @@ class ConnectionStatusDialog(BaseDialog):
                 duration = (
                     asyncio.get_event_loop().time() - self.parent.connect_start_time
                 )
-                # print(f"[Connection] Connection established in {duration:.2f} seconds")
+                print(f"[Connection] Connection established in {duration:.2f} seconds")
 
             status = DeviceStatus(name=device_info.name, rssi=device_info.rssi)
             asyncio.create_task(self._countdown(status))

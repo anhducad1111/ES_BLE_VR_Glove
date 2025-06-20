@@ -302,7 +302,7 @@ class ConnectionDialog(BaseDialog):
             return
 
         # Record connection start time
-        # self.connect_start_time = asyncio.get_event_loop().time()
+        self.connect_start_time = asyncio.get_event_loop().time()
 
         self.connect_btn.configure(state="disabled", text="Connecting...")
 
