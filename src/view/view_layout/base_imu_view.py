@@ -199,7 +199,8 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
         self.button_calibrate.configure(state=state)
 
     def clear_values(self) -> None:
-        """Clear all displayed values."""
+        """Clear all displayed values and reset state."""
+        # Reset all sensor values
         for sensor_type in self.SENSOR_CONFIGS:
             if sensor_type == "euler":
                 self.update_euler(
@@ -212,7 +213,12 @@ class BaseIMUView(ctk.CTkFrame, IMUViewInterface):
                     self.DEFAULT_VALUE,
                     self.DEFAULT_VALUE,
                 )
+        
+        # Reset calibration status
         self.update_calib_status("--")
+        
+        # Disable buttons
+        self.set_button_states(False)
 
     def _handle_config_click(self) -> None:
         """Handle config button click by creating coroutine in event loop."""

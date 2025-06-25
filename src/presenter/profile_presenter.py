@@ -29,8 +29,9 @@ class ProfilePresenter:
             return False
 
         try:
-            # Stop battery notifications
-            await self.esp32_service.stop_battery_notifications()
+            # Stop battery level and charging notifications
+            await self.esp32_service.stop_battery_level_notify()
+            await self.esp32_service.stop_battery_charging_notify()
 
             # Clear view synchronously if available
             if self.view:

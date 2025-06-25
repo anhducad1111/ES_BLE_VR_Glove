@@ -1,6 +1,7 @@
 from src.util.imu_config import IMUConfigUtil
 from src.view.view_dialog import IMUCalibrationDialog, IMUConfigDialog
 from src.view.view_layout.base_imu_view import BaseIMUView
+import asyncio
 
 
 class IMU2View(BaseIMUView):
@@ -9,10 +10,18 @@ class IMU2View(BaseIMUView):
 
     async def _on_config(self):
         """Handle IMU2 configuration button click"""
-        # Read current config
-        data = await self.imu_service.read_config()
+        # Add small delay to ensure BLE characteristic is ready
+        await asyncio.sleep(0.1)
+        
+        # Read current config with retry
+        retries = 2
+        data = None
+        for _ in range(retries):
+            data = await self.imu_service.read_config()
+            if data:
+                break
+            await asyncio.sleep(0.1)
         dialog = IMUConfigDialog(self, "IMU2")
-
         if data:
             # Set dialog values from config using utility
             # Set dialog values from config using utility

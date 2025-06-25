@@ -64,4 +64,6 @@ venv.bak/
 # Config files containing sensitive data
 gatt.json
 assets/gatttable.csv
+commit_log.txt
+docs/
 bat/

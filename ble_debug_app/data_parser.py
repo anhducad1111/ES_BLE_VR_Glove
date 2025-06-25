@@ -1,5 +1,5 @@
 import struct
-from typing import Optional, Union, Dict
+from typing import Optional, Union, Dict, Any
 from .ble_config import BLEConfig
 
 class DataType:
@@ -18,7 +18,7 @@ class DataType:
     UNKNOWN = "unknown"
 
 class DataParser:
-    """Parser for BLE characteristic data"""
+    """Parser for BLE characteristic data with validation"""
     
     def __init__(self, config: BLEConfig):
         self.config = config
@@ -44,6 +44,30 @@ class DataParser:
             0: "🔌 Not Charging",
             1: "⚡ Charging",
             2: "✅ Fully Charged"
+        }
+
+        # IMU configuration limits
+        self.imu_limits = {
+            "accel_gyro_freq": {
+                "min": 10,    # Hz
+                "max": 1000   # Hz
+            },
+            "mag_freq": {
+                "min": 10,    # Hz
+                "max": 100    # Hz
+            },
+            "accel_range": {
+                "min": 2,     # g
+                "max": 16     # g
+            },
+            "gyro_range": {
+                "min": 125,   # dps
+                "max": 2000   # dps
+            },
+            "mag_range": {
+                "min": 4,     # gauss
+                "max": 16     # gauss
+            }
         }
         
     def identify_data_type(self, data: bytes, uuid: str = "") -> str:
@@ -104,86 +128,151 @@ class DataParser:
                 return self._parse_device_info(data, uuid)
             else:
                 return self._format_raw_data(data)
+                
         except Exception as e:
             return f"Parse error: {e}"
 
     def _parse_imu_raw(self, data: bytes) -> str:
+        """Parse raw IMU data with validation"""
         values = struct.unpack('<9h', data)
-        return (
+        result = (
             f"IMU Raw Data:\n"
             f"  Accel (mg): X={values[0]}, Y={values[1]}, Z={values[2]}\n"
             f"  Gyro (0.01 rad/s): X={values[3]}, Y={values[4]}, Z={values[5]}\n"
             f"  Mag (uT): X={values[6]}, Y={values[7]}, Z={values[8]}"
         )
+        
+        # Validate against typical ranges
+        accel_range = max(abs(x) for x in values[0:3])
+        gyro_range = max(abs(x) for x in values[3:6])
+        mag_range = max(abs(x) for x in values[6:9])
+        
+        if accel_range > 16000:  # 16g in mg
+            result += "\nWARNING: Accelerometer values exceed typical range"
+        if gyro_range > 2000:    # 2000 dps
+            result += "\nWARNING: Gyroscope values exceed typical range"
+        if mag_range > 4800:     # 4.8 gauss in uT
+            result += "\nWARNING: Magnetometer values exceed typical range"
+            
+        return result
 
     def _parse_imu_euler(self, data: bytes) -> str:
+        """Parse IMU Euler angles with validation"""
         euler = struct.unpack('<3f', data[0:12])
         calib = data[12]
-        return (
+        result = (
             f"IMU Euler Data:\n"
             f"  Yaw (deg): {euler[0]:.2f}\n"
             f"  Pitch (deg): {euler[1]:.2f}\n"
             f"  Roll (deg): {euler[2]:.2f}\n"
             f"  Calibration Status: {calib}"
         )
+        
+        # Validate angle ranges
+        if not all(-180 <= angle <= 180 for angle in euler):
+            result += "\nWARNING: Euler angles outside valid range (-180° to 180°)"
+            
+        return result
+
+    def parse_imu_config(self, data: bytes) -> Optional[Dict[str, Any]]:
+        """Parse IMU configuration data"""
+        if len(data) != 15:
+            return None
+            
+        cmd = data[0]
+        config = {
+            "command": self._cmd_map.get(cmd, f"Unknown ({cmd})"),
+            "accel_gyro_freq": data[1],
+            "mag_freq": data[2],
+            "accel_range": data[5],
+            "gyro_range": data[6],
+            "mag_range": data[7],
+            "update_rate": struct.unpack('<H', data[11:13])[0]
+        }
+        
+        # Validate configuration
+        warnings = []
+        for param, value in config.items():
+            if param in self.imu_limits:
+                limits = self.imu_limits[param]
+                if not limits["min"] <= value <= limits["max"]:
+                    warnings.append(
+                        f"{param} value {value} outside valid range "
+                        f"({limits['min']} - {limits['max']})"
+                    )
+        
+        if warnings:
+            config["warnings"] = warnings
+            
+        return config
 
     def _parse_config(self, data: bytes) -> str:
-        cmd = data[0]
-        cmd_str = self._cmd_map.get(cmd, f"Unknown ({cmd})")
-
-        def get_imu_config(idx_start: int) -> Dict[str, str]:
-            return {
-                "ag_freq": self.config.get_imu_config("accel_gyro_freq", data[idx_start]),
-                "mag_freq": self.config.get_imu_config("mag_freq", data[idx_start + 1]),
-                "accel": self.config.get_imu_config("accel_range", data[idx_start + 4]),
-                "gyro": self.config.get_imu_config("gyro_range", data[idx_start + 5]),
-                "mag": self.config.get_imu_config("mag_range", data[idx_start + 6])
-            }
-
-        imu1 = get_imu_config(1)
-        imu2 = get_imu_config(3)
-        update_rate = struct.unpack('<H', data[11:13])[0]
-
-        return (
-            f"Configuration Data:\n"
-            f"Command State: {cmd_str}\n\n"
-            f"IMU1 Configuration:\n"
-            f"  Frequencies:\n"
-            f"    Accelerometer & Gyroscope: {imu1['ag_freq']}\n"
-            f"    Magnetometer: {imu1['mag_freq']}\n"
-            f"  Ranges:\n"
-            f"    Accelerometer: ±{imu1['accel']}\n"
-            f"    Gyroscope: ±{imu1['gyro']}\n"
-            f"    Magnetometer: ±{imu1['mag']}\n\n"
-            f"IMU2 Configuration:\n"
-            f"  Frequencies:\n"
-            f"    Accelerometer & Gyroscope: {imu2['ag_freq']}\n"
-            f"    Magnetometer: {imu2['mag_freq']}\n"
-            f"  Ranges:\n"
-            f"    Accelerometer: ±{imu2['accel']}\n"
-            f"    Gyroscope: ±{imu2['gyro']}\n"
-            f"    Magnetometer: ±{imu2['mag']}\n\n"
-            f"Sensor Update Rate: {update_rate} ms"
-        )
+        """Parse configuration data"""
+        config = self.parse_imu_config(data)
+        if not config:
+            return "Invalid configuration data"
+            
+        result = f"Configuration Data:\n"
+        result += f"Command State: {config['command']}\n\n"
+        
+        for imu in range(1, 3):
+            result += f"IMU{imu} Configuration:\n"
+            result += "  Frequencies:\n"
+            result += f"    Accelerometer & Gyroscope: {config['accel_gyro_freq']} Hz\n"
+            result += f"    Magnetometer: {config['mag_freq']} Hz\n"
+            result += "  Ranges:\n"
+            result += f"    Accelerometer: ±{config['accel_range']}g\n"
+            result += f"    Gyroscope: ±{config['gyro_range']} dps\n"
+            result += f"    Magnetometer: ±{config['mag_range']} gauss\n\n"
+            
+        result += f"Sensor Update Rate: {config['update_rate']} ms"
+        
+        if "warnings" in config:
+            result += "\n\nConfiguration Warnings:\n"
+            for warning in config["warnings"]:
+                result += f"- {warning}\n"
+                
+        return result
 
     def _parse_flex_sensor(self, data: bytes) -> str:
+        """Parse flex sensor data with validation"""
         values = struct.unpack('<5f', data)
-        return "\n".join([
-            "Flex Sensor Data (KOhm):",
-            *(f"  Sensor {i+1}: {v:.2f}" for i, v in enumerate(values))
-        ])
+        result = "Flex Sensor Data (KOhm):\n"
+        
+        for i, v in enumerate(values):
+            result += f"  Sensor {i+1}: {v:.2f}"
+            
+            # Validate sensor range (typical range 10-110 KOhm)
+            if not 10 <= v <= 110:
+                result += " (WARNING: Outside typical range)"
+            result += "\n"
+            
+        return result
 
     def _parse_joystick(self, data: bytes) -> str:
+        """Parse joystick data with validation"""
         x, y = struct.unpack('<hh', data[0:4])
         button = data[4]
-        return (
+        result = (
             f"Joystick Data:\n"
             f"  X axis: {x}\n"
             f"  Y axis: {y}\n"
             f"  Button: {'Pressed' if button == 1 else 'Not Pressed'}"
         )
+        
+        # Validate range (0-4095)
+        if not (0 <= x <= 4095 and 0 <= y <= 4095):
+            result += "\nWARNING: Values outside valid range (0-4095)"
+            
+        # Check center position (±1.5%)
+        center_range = 4095 * 0.015  # 1.5%
+        if abs(x - 2047) <= center_range and abs(y - 2047) <= center_range:
+            result += "\nJoystick in center position"
+            
+        return result
 
     def _parse_overall_status(self, data: bytes) -> str:
+        """Parse overall status with validation"""
         error = "No Error" if data[0] == 0 else "General Error"
         return (
             f"Overall Status:\n"
@@ -194,6 +283,7 @@ class DataParser:
         )
 
     def _parse_buttons(self, data: bytes) -> str:
+        """Parse button states"""
         return "\n".join([
             "Button States:",
             *(f"  Button {i+1}: {'Pressed' if state else 'Not Pressed'}"
@@ -201,18 +291,28 @@ class DataParser:
         ])
 
     def _parse_force_sensor(self, data: bytes) -> str:
+        """Parse force sensor data"""
         force = struct.unpack('<f', data)[0]
         return f"Force Sensor: {force:.2f} kOhm"
 
     def _parse_battery(self, data: bytes) -> str:
+        """Parse battery level with validation"""
         level = data[0]
         icon = "🔋" if level > 20 else "🪫"
-        return f"Battery Level: {icon} {level}%"
+        result = f"Battery Level: {icon} {level}%"
+        
+        # Add warning for low battery
+        if level <= 20:
+            result += "\nWARNING: Low battery"
+            
+        return result
 
     def _parse_charging(self, data: bytes) -> str:
+        """Parse charging state"""
         return f"Charging State: {self._charging_map.get(data[0], 'Unknown State')}"
 
     def _parse_device_info(self, data: bytes, uuid: str) -> str:
+        """Parse device information"""
         try:
             text = data.decode('utf-8')
             if len(data) == 9:  # Version
@@ -231,6 +331,7 @@ class DataParser:
             return self._format_raw_data(data)
 
     def _format_raw_data(self, data: bytes) -> str:
+        """Format raw data in hex and ASCII"""
         hex_part = ' '.join(f'{b:02x}' for b in data)
         ascii_part = ''.join(chr(b) if 0x20 <= b <= 0x7E else '.' for b in data)
         return f"Data (Hex): {hex_part}\nASCII: {ascii_part}"

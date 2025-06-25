@@ -229,22 +229,28 @@ class MainView:
     def clear_values(self) -> None:
         """Reset all view components on disconnect"""
         print("[MainView] clear_values called")
-        # Clear all child views
-        if self.log_view:
-            print("[MainView] Clearing LogView")
-            self.log_view.clear_values()
-        if self.device_monitor:
-            self.device_monitor.clear_values()
-        if self.gamepad_view:
-            self.gamepad_view.clear_values()
-        if self.overall_status_view:
-            self.overall_status_view.clear_values()
-        if self.imu1_view:
-            self.imu1_view.clear_values()
-        if self.imu2_view:
-            self.imu2_view.clear_values()
-        if self.sensor_view:
-            self.sensor_view.clear_values()
+
+        # Reset views in specific order to ensure proper cleanup
+        views_to_clear = [
+            (self.log_view, "LogView"),
+            (self.device_monitor, "DeviceMonitor"),
+            (self.overall_status_view, "OverallStatus"),
+            (self.imu1_view, "IMU1"),
+            (self.imu2_view, "IMU2"),
+            (self.sensor_view, "Sensor"),
+            (self.gamepad_view, "Gamepad")
+        ]
+
+        for view, name in views_to_clear:
+            if view:
+                print(f"[MainView] Clearing {name}")
+                try:
+                    view.clear_values()
+                except Exception as e:
+                    print(f"[MainView] Error clearing {name}: {e}")
+
+        # Force update display to ensure changes are visible
+        self.window.update_idletasks()
 
     def _stop_logging(self) -> None:
         """Stop logging on disconnect"""
