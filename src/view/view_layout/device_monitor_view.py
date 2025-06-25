@@ -64,7 +64,7 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         """Show UI elements for lost connection"""
         if self.is_connected:  # Only show red button if still marked as connected
             self.device_button.configure(
-                text="Connection Lost",
+                text="Disconnect",
                 fg_color="red",
                 hover_color="#B22222"
             )
