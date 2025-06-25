@@ -1,7 +1,7 @@
 .PHONY: setup clean build test format lint release govenv all
 
 PYTHON := python
-VENV := venv
+VENV := ES_BLE_UI_venv
 BIN := $(VENV)\Scripts
 SRC := src
 TESTS := tests
