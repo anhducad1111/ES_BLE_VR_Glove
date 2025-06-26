@@ -1,10 +1,13 @@
 import asyncio
 import customtkinter as ctk
+import sys
+import os
 
 from src.config.app_config import AppConfig
 from src.view.main_view import MainView
 from src.model.esp32_service import ESP32BLEService
 from src.model.device_manager import DeviceManager
+from src.util.system_log import SystemLog
 from src.presenter import (
     ConnectionPresenter,
     GamepadPresenter,
@@ -16,11 +19,32 @@ from src.presenter import (
     LogPresenter
 )
 
+# Create custom stdout writer that also logs to our system logger
+class LogWriter:
+    def __init__(self, original_stdout):
+        self.original_stdout = original_stdout
+        self.system_log = SystemLog.get_instance()
+
+    def write(self, text):
+        if text.strip():  # Only log non-empty lines
+            self.system_log.log_message(text.strip())
+        self.original_stdout.write(text)
+
+    def flush(self):
+        self.original_stdout.flush()
+
 class App:
     """Main application class handling BLE device monitoring and IMU data visualization"""
     
     def __init__(self):
         """Initialize the application with BLE service, views, and presenters"""
+        # Initialize system logger
+        self.system_log = SystemLog.get_instance()
+        self.system_log.start_logging()  # No folder needed, uses project root
+
+        # Redirect stdout to our logging system
+        sys.stdout = LogWriter(sys.stdout)
+
         # Initialize base components
         self.loop = self._setup_event_loop()
         self.ble_service = ESP32BLEService()  # Will return singleton instance
@@ -165,6 +189,7 @@ class App:
         """Handle application shutdown"""
         from src.view.view_dialog.exit_confirmation_dialog import ExitConfirmationDialog
         dialog = ExitConfirmationDialog(self.window)
+        self.system_log.log_message("Application shutdown initiated")
         
         async def handle_exit():
             """Handle exit confirmation"""
@@ -179,11 +204,17 @@ class App:
                     # No device connected, just quit
                     dialog.yes_btn.configure(state="disabled")
                 
-                # Stop event loop and quit
+                # Stop event loop and logger, then quit
                 self.loop.stop()
+                self.system_log.stop_logging()
+                sys.stdout = sys.__stdout__  # Restore original stdout
                 self.window.quit()
             except Exception as e:
-                print(f"Error during application shutdown: {e}")
+                error_msg = f"Error during application shutdown: {e}"
+                print(error_msg)
+                self.system_log.log_message(error_msg)
+                self.system_log.stop_logging()
+                sys.stdout = sys.__stdout__  # Restore original stdout
                 self.window.quit()
                 
         dialog.set_on_yes_callback(lambda: self.loop.create_task(handle_exit()))

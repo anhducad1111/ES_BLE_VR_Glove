@@ -83,7 +83,7 @@ class BLEService(BLEProfileChecker):
                 return False
 
             # Wait for service discovery
-            max_retries = 5
+            max_retries = 3
             for attempt in range(max_retries):
                 await asyncio.sleep(0.2)
                 if self.client.services:

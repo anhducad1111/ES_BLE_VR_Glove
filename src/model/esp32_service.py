@@ -188,14 +188,14 @@ class ESP32BLEService(BLEService):
                 await asyncio.sleep(1.0)
 
             # Connection retry
-            for attempt in range(5):
+            for attempt in range(3):
                 try:
                     if await super().connect(device_info):
                         break
-                    if attempt < 4:
+                    if attempt < 2:
                         await asyncio.sleep(0.5)
                 except Exception:
-                    if attempt < 4:
+                    if attempt < 2:
                         await asyncio.sleep(0.5)
                         continue
                     return False

@@ -290,12 +290,22 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
             self.clear_values()
             self.is_connected = False
             
-            # Delegate disconnect to presenter
+            # Delegate disconnect to presenter through async wrapper
             if self.disconnect_command and self.loop:
-                # Create the coroutine first
-                corrupt = self.disconnect_command()
-                # Then pass the coroutine to run_coroutine_threadsafe
-                asyncio.run_coroutine_threadsafe(corrupt, self.loop)
+                async def disconnect_wrapper():
+                    try:
+                        # Attempt disconnect if command returns a coroutine
+                        coro = self.disconnect_command()
+                        if coro is not None:
+                            await coro
+                    except Exception as e:
+                        print(f"Error during disconnect: {e}")
+                    finally:
+                        # Always update UI state after disconnect attempt
+                        self.handle_disconnect_complete()
+
+                # Create and run the coroutine properly
+                asyncio.run_coroutine_threadsafe(disconnect_wrapper(), self.loop)
         else:
             self._show_connection_dialog()
 

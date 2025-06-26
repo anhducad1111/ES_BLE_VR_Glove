@@ -21,7 +21,7 @@ class ConnectionPresenter:
         
         while self.service.is_connected():
             try:
-                await asyncio.sleep(3)  # Check every 3 seconds
+                await asyncio.sleep(0.5)  # Check every 3 seconds
                 name = await self.service.read_device_name()
                 if not name:
                     profile = self.get_connected_device()
