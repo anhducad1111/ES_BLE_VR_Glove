@@ -1,5 +1,6 @@
 import asyncio
 import customtkinter as ctk
+
 from src.config.app_config import AppConfig
 from src.view.main_view import MainView
 from src.model.esp32_service import ESP32BLEService

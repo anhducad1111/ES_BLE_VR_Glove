@@ -285,40 +285,19 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
     def _handle_device_button(self):
         """Handle button click based on connection state"""
         if self.is_connected:
-            self._disconnect_device()
+            # Update UI immediately
+            self.device_button.configure(text="Disconnecting...", state="disabled")
+            self.clear_values()
+            self.is_connected = False
+            
+            # Delegate disconnect to presenter
+            if self.disconnect_command and self.loop:
+                # Create the coroutine first
+                corrupt = self.disconnect_command()
+                # Then pass the coroutine to run_coroutine_threadsafe
+                asyncio.run_coroutine_threadsafe(corrupt, self.loop)
         else:
             self._show_connection_dialog()
-
-    async def _disconnect_async(self):
-        """Async disconnect handler"""
-        if hasattr(self, "disconnect_command"):
-            self.stop_heartbeat()  # Stop heartbeat monitoring
-
-            try:
-                await self.disconnect_command()
-            finally:
-                # Reset connection state and UI
-                self.is_connected = False
-                self.device_button.configure(
-                    text="Add device",
-                    state="normal",
-                    fg_color=self.config.BUTTON_COLOR,
-                    hover_color=self.config.BUTTON_HOVER_COLOR,
-                )
-                # Reset connection dialog reference
-                self.connection_dialog = None
-
-    def _disconnect_device(self):
-        """Handle device disconnection"""
-
-        # Update UI immediately
-        self.device_button.configure(text="Disconnecting...", state="disabled")
-        self.clear_values()  # Clear all values immediately
-        self.is_connected = False  # Update connection state immediately
-
-        # Run disconnect in background
-        if self.loop:
-            asyncio.run_coroutine_threadsafe(self._disconnect_async(), self.loop)
 
     def _show_connection_dialog(self):
         """Show the connection dialog"""
@@ -402,6 +381,18 @@ class DeviceMonitorView(ctk.CTkFrame, ConnectionViewInterface):
         """Update charging state display"""
         # Use after to update UI from any thread
         self.after(0, lambda: self.update_value("charging", state))
+
+    def handle_disconnect_complete(self):
+        """Update UI after disconnect is complete"""
+        self.device_button.configure(
+            text="Add device",
+            state="normal",
+            fg_color=self.config.BUTTON_COLOR,
+            hover_color=self.config.BUTTON_HOVER_COLOR,
+        )
+        if self.connection_dialog:
+            self.connection_dialog.destroy()
+            self.connection_dialog = None
 
     def destroy(self):
         """Clean up resources before destroying widget"""

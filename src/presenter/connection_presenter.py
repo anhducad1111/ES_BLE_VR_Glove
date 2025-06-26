@@ -16,9 +16,9 @@ class ConnectionPresenter:
 
     async def _check_connection(self):
         """Periodic check of connection status with auto-reconnection"""
-        MAX_RECONNECT_ATTEMPTS = 5
-        RECONNECT_DELAY = 5  # seconds
-
+        MAX_RECONNECT_ATTEMPTS = 2
+        RECONNECT_DELAY = 2  # seconds
+        
         while self.service.is_connected():
             try:
                 await asyncio.sleep(3)  # Check every 3 seconds
@@ -27,7 +27,8 @@ class ConnectionPresenter:
                     profile = self.get_connected_device()
                     if not profile:
                         print("No device profile available for reconnection")
-                        await self.disconnect()
+                        # Trigger disconnect button click to clear all views
+                        self.view._handle_device_button()
                         break
 
                     print("\nConnection lost, attempting auto-reconnection...")
@@ -39,11 +40,11 @@ class ConnectionPresenter:
 
                     self.view.show_connection_lost()
 
-                    # Stop services before attempting reconnection
-                    if hasattr(self.service, "start_services"):
-                        await self.service.disconnect()
-                        await asyncio.sleep(1)  # Wait for cleanup
+                    # Stop services and disconnect before attempting reconnection
+                    await self.service.disconnect()
+                    await asyncio.sleep(0.1)
 
+                    reconnection_success = False
                     # Try reconnecting up to MAX_RECONNECT_ATTEMPTS times
                     for attempt in range(MAX_RECONNECT_ATTEMPTS):
                         print(
@@ -53,27 +54,43 @@ class ConnectionPresenter:
                             f"Reconnecting (Attempt {attempt + 1})"
                         )
 
-                        # Attempt to reconnect
-                        if await self.service.connect(profile):
-                            # Start device services after reconnection
-                            if hasattr(self.service, "start_services"):
-                                if await self.service.start_services():
-                                    print("Auto-reconnection successful")
+                        try:
+                            # Attempt to reconnect
+                            if await self.service.connect(profile):
+                                # Start device services after reconnection
+                                if hasattr(self.service, "start_services"):
+                                    if await self.service.start_services():
+                                        print("Auto-reconnection successful")
+                                        reconnection_success = True
+                                        break
+                                    else:
+                                        print("Failed to start services")
+                                        await self.service.disconnect()
+                                else:
+                                    reconnection_success = True
                                     break
+                            else:
+                                print("Failed to reconnect")
+                        except Exception as e:
+                            print(f"Reconnection attempt failed: {e}")
+                            await self.service.disconnect()
 
                         if attempt < MAX_RECONNECT_ATTEMPTS - 1:
                             print(
                                 f"Waiting {RECONNECT_DELAY} seconds before next attempt..."
                             )
                             await asyncio.sleep(RECONNECT_DELAY)
-                    else:
+
+                    if not reconnection_success:
                         print("\nAuto-reconnection failed after all attempts")
-                        await self.disconnect()
+                        profile.update_connection_status("Disconnected")
+                        # Trigger disconnect button click instead of direct disconnect
+                        self.view._handle_device_button()
                         break
 
             except Exception as e:
                 print(f"Connection check error: {e}")
-                # Don't disconnect immediately on single error
+                await asyncio.sleep(1)  # Brief delay before retrying
                 continue
 
     async def scan_for_devices(self):
@@ -167,10 +184,15 @@ class ConnectionPresenter:
             if profile:
                 profile.update_connection_status("Disconnected")
 
+            # Update view state after disconnect complete
+            self.view.handle_disconnect_complete()
+
             return result
 
         except Exception as e:
             print(f"Error during disconnect: {e}")
+            # Ensure view is updated even on error
+            self.view.handle_disconnect_complete()
             return False
 
     def is_connected(self):

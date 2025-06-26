@@ -12,7 +12,6 @@ project_root/
 │   ├── model/             # Data models
 │   ├── view/              # UI components
 │   ├── presenter/         # Business logic
-│   └── controller/        # Controllers (if needed)
 ├── scripts/               # Automation scripts
 │   ├── setup.sh          # Project setup
 │   ├── build.sh          # Build process
@@ -29,6 +28,7 @@ project_root/
 ├── .gitignore         # Git ignore rules
 └── main.py            # Entry point
 ```
+
 
 ### 1.2 Project Utils (utils.py)
 

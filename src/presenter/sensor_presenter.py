@@ -49,8 +49,6 @@ class SensorPresenter:
                 # Then stop logging if active
                 if self.sensor_logger and self.sensor_logger.is_logging:
                     self.sensor_logger.stop_logging()
-                    # Reset log button state
-                    self.view.reset_log_button()
 
                 self.view.set_button_states(False)
 
